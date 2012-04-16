@@ -36,13 +36,13 @@ REAL shape_evaluate (struct shape *shp, REAL *point)
   case ELP:
     super = shp->data;
     SUB (super->c, point, z);
-    a = DOT (super->v[0], z);
-    b = DOT (super->v[1], z);
-    c = DOT (super->v[2], z);
+    a = DOT (super->u, z);
+    b = DOT (super->v, z);
+    c = DOT (super->w, z);
     a = fabs (a);
     b = fabs (b);
     c = fabs (c);
-    v = pow (pow (a, super->r) + pow (b, super->r), super->t / super->r) * pow (c, super->t) - 1.0;
+    v = pow (pow (a, super->p) + pow (b, super->p), super->q / super->p) * pow (c, super->q) - 1.0;
     break;
   }
 

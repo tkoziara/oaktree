@@ -126,17 +126,17 @@ static PyGetSetDef SHAPE_getset [] =
 /* create superellipsoid */
 static PyObject* SUPERELLIPSOID (PyObject *self, PyObject *args, PyObject *kwds)
 {
-  KEYWORDS ("center", "radii", "r", "t", "color");
+  KEYWORDS ("center", "radii", "p", "q", "vcolor", "scolor");
   PyObject *center, *radii;
+  int vcolor, scolor;
+  double p, q;
   SHAPE *out;
-  double r, t;
-  int color;
 
   out = (SHAPE*)SHAPE_TYPE.tp_alloc (&SHAPE_TYPE, 0);
 
   if (out)
   {
-    PARSEKEYS ("OOddi", &center, &radii, &r, &t, &color);
+    PARSEKEYS ("OOddii", &center, &radii, &p, &q, &vcolor, &scolor);
 
     TYPETEST (is_tuple (center, kwl[0], 3) && is_tuple (radii, kwl[1], 3)); /* TODO */
   }

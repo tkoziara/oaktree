@@ -23,7 +23,7 @@ CFLAGS = -std=c99 $(DEBUG) $(PROFILE) $(REAL)
 LIB = -lm $(LAPACK) $(BLAS) $(GLLIB) $(PYTHONLIB)
 
 ifeq ($(MPI),yes)
-  LIBMPI = -lm $(LAPACK) $(BLAS) $(PYTHONLIB) $(MPILIBS)
+  LIBMPI = -lm $(LAPACK) $(BLAS) $(PYTHONLIB) $(ZOLTANLIB)
 endif
 
 ifeq ($(MPI),yes)
@@ -77,4 +77,4 @@ obj/oaktree.o: oaktree.c oaktree.h viewer.h render.h input.h error.h alg.h
 # MPI
 
 obj/oaktree-mpi.o: oaktree.c oaktree.h input.h error.h alg.h
-	$(CC) $(CFLAGS) $(MPIFLG) -c -o $@ $<
+	$(CC) $(CFLAGS) $(MPIFLAGS) -c -o $@ $<

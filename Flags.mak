@@ -32,6 +32,5 @@ else
 endif
 
 ifeq ($(MPI),yes)
-  MPIFLG = -DMPI $(ZOLTANINC)
-  MPILIBS = $(ZOLTANLIB)
+  MPIFLAGS = -DMPI $(ZOLTANINC)
 endif

@@ -1,0 +1,316 @@
+#LyX 1.6.9 created this file. For more info see http://www.lyx.org/
+\lyxformat 345
+\begin_document
+\begin_header
+\textclass book
+\use_default_options true
+\language english
+\inputencoding auto
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize a4paper
+\use_geometry true
+\use_amsmath 1
+\use_esint 1
+\cite_engine basic
+\use_bibtopic false
+\paperorientation portrait
+\leftmargin 2cm
+\topmargin 4cm
+\rightmargin 2cm
+\bottommargin 4cm
+\headheight 2cm
+\headsep 1cm
+\footskip 2cm
+\secnumdepth 2
+\tocdepth 2
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\author "" 
+\author "" 
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Oaktree Manual
+\end_layout
+
+\begin_layout Author
+\begin_inset Graphics
+	filename oaktree.png
+	width 2cm
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset toc
+LatexCommand tableofcontents
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Chapter
+\begin_inset CommandInset label
+LatexCommand label
+name "cha:Introduction"
+
+\end_inset
+
+Introduction
+\end_layout
+
+\begin_layout Chapter
+\begin_inset CommandInset label
+LatexCommand label
+name "cha:Installation"
+
+\end_inset
+
+Installation
+\end_layout
+
+\begin_layout Chapter
+\begin_inset CommandInset label
+LatexCommand label
+name "cha:Running"
+
+\end_inset
+
+Running
+\end_layout
+
+\begin_layout Chapter
+\begin_inset CommandInset label
+LatexCommand label
+name "cha:Input"
+
+\end_inset
+
+Input
+\end_layout
+
+\begin_layout Standard
+Oakree input is language extends 
+\begin_inset CommandInset href
+LatexCommand href
+name "Python"
+target "http://www.python.org/"
+
+\end_inset
+
+.
+ Subroutines and objects related to input processing are listed below.
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:SUPERELLIPSOID"
+
+\end_inset
+
+SUPERELLIPSOID
+\end_layout
+
+\begin_layout Standard
+Superellipsoid is defined by the zero set of the implicit function
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \[
+F\left(x,y,z\right)=\left(\left|\frac{x}{a}\right|^{p}+\left|\frac{y}{b}\right|^{p}\right)^{q/p}+\left|\frac{z}{c}\right|^{q}-1\mbox{.}\]
+
+\end_inset
+
+For an arbitrary center 
+\begin_inset Formula $\mathbf{c}$
+\end_inset
+
+ and orientation 
+\begin_inset Formula $\left(\mathbf{u},\mathbf{v},\mathbf{w}\right)$
+\end_inset
+
+ this takes form
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \[
+F\left(\mathbf{x}\right)=\left(\left|\left(\mathbf{x}-\mathbf{c}\right)\cdot\mathbf{u}\right|^{p}+\left|\left(\mathbf{x}-\mathbf{c}\right)\cdot\mathbf{v}\right|^{p}\right)^{q/p}+\left|\left(\mathbf{x}-\mathbf{c}\right)\cdot\mathbf{w}\right|^{q}-1\]
+
+\end_inset
+
+where
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \[
+\mathbf{u}\perp\mathbf{v}\perp\mathbf{w}\]
+
+\end_inset
+
+and
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula \[
+\left|\mathbf{u}\right|=\frac{1}{a},\left|\mathbf{v}\right|=\frac{1}{b},\left|\mathbf{w}\right|=\frac{1}{c}\mbox{.}\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection*
+obj = SUPERELLIPSOID (center, radii, r, t, vcolor, scolor)
+\end_layout
+
+\begin_layout Standard
+This routine creates a translated superellipsoid in an initial orientation
+ aligned with the global frame.
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+center
+\series default
+ - tuple 
+\emph on
+
+\begin_inset Formula $\left(x,y,z\right)$
+\end_inset
+
+
+\emph default
+ defining the center
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+radii
+\series default
+ - tuple 
+\emph on
+
+\begin_inset Formula $\left(a,b,c\right)$
+\end_inset
+
+
+\emph default
+ defining the radii
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+p
+\series default
+ - exponent 
+\begin_inset Formula $p$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+q
+\series default
+ - exponent 
+\begin_inset Formula $q$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+vcolor
+\series default
+ - integer volume color
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor
+\series default
+ - integer surface color
+\end_layout
+
+\begin_layout Chapter
+\begin_inset CommandInset label
+LatexCommand label
+name "cha:Output"
+
+\end_inset
+
+Output
+\end_layout
+
+\begin_layout Chapter
+\begin_inset CommandInset label
+LatexCommand label
+name "cha:Viewer"
+
+\end_inset
+
+Viewer
+\end_layout
+
+\begin_layout Chapter
+\begin_inset CommandInset label
+LatexCommand label
+name "cha:Tutorials"
+
+\end_inset
+
+Tutorials
+\end_layout
+
+\begin_layout Chapter
+\begin_inset CommandInset label
+LatexCommand label
+name "cha:Theory"
+
+\end_inset
+
+Theory
+\end_layout
+
+\end_body
+\end_document

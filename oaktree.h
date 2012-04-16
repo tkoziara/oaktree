@@ -10,9 +10,9 @@ struct superellipsoid
 {
   REAL extents [6];
 
-  REAL c [3], v [3][3], r, t; /* F(x) = (|<c-x,v[0]>|**r + |<c-x,v[1]>|**r)**(t/r) + |z/v[2]|**t - 1 */
+  REAL c [3], u [3], v [3], w [3], p, q; /* F(x) = (|<c-x,u>|**p + |<c-x,v>|**p)**(q/p) + |<c-x,w>|**q - 1 */
 
-  short color;
+  short vcolor, scolor;
 };
 
 struct shape /* general shape */
