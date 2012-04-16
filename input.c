@@ -41,7 +41,21 @@ memset (&(typedesc), 0, sizeof (PyTypeObject));\
  * utilities
  */
 
-/* test whether an object is a tuple of length len */
+/* positive test */
+static int is_positive (double num, char *var)
+{
+  if (num <= 0)
+  {
+    char buf [BUFLEN];
+    sprintf (buf, "'%s' must be positive", var);
+    PyErr_SetString (PyExc_ValueError, buf);
+    return 0;
+  }
+
+  return 1;
+}
+
+/* tuple test */
 static int is_tuple (PyObject *obj, char *var, int len)
 {
   if (obj)
@@ -91,7 +105,7 @@ static PyTypeObject SHAPE_TYPE;
 
 typedef struct {
   PyObject_HEAD
-  struct shape *shp;
+  struct shape *ptr;
 } SHAPE;
 
 /* constructor */
@@ -127,8 +141,10 @@ static PyGetSetDef SHAPE_getset [] =
 static PyObject* SUPERELLIPSOID (PyObject *self, PyObject *args, PyObject *kwds)
 {
   KEYWORDS ("center", "radii", "p", "q", "vcolor", "scolor");
+  struct superellipsoid *super;
   PyObject *center, *radii;
   int vcolor, scolor;
+  struct shape *shp;
   double p, q;
   SHAPE *out;
 
@@ -138,7 +154,41 @@ static PyObject* SUPERELLIPSOID (PyObject *self, PyObject *args, PyObject *kwds)
   {
     PARSEKEYS ("OOddii", &center, &radii, &p, &q, &vcolor, &scolor);
 
-    TYPETEST (is_tuple (center, kwl[0], 3) && is_tuple (radii, kwl[1], 3)); /* TODO */
+    TYPETEST (is_tuple (center, kwl[0], 3) && is_tuple (radii, kwl[1], 3) &&
+	      is_positive (p, kwl [2]) && is_positive (q, kwl [3]));
+
+    ERRMEM (super = malloc (sizeof (struct superellipsoid)));
+
+    super->c [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 0));
+    super->c [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 1));
+    super->c [2] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 2));
+
+    super->u [0] = 1.0 / (REAL) PyFloat_AsDouble (PyTuple_GetItem (radii, 0));
+    super->v [1] = 1.0 / (REAL) PyFloat_AsDouble (PyTuple_GetItem (radii, 1));
+    super->w [2] = 1.0 / (REAL) PyFloat_AsDouble (PyTuple_GetItem (radii, 2));
+    super->u [1] = super->u [2] = 0.0;
+    super->v [0] = super->v [2] = 0.0;
+    super->w [0] = super->w [1] = 0.0;
+
+    super->p = p;
+    super->q = q;
+
+    super->vcolor = vcolor;
+    super->scolor = scolor;
+
+    ERRMEM (shp = calloc (1, sizeof (struct shape)));
+
+    shp->extents [0] = super->c [0] - 1.0 / super->u [0];
+    shp->extents [1] = super->c [1] - 1.0 / super->v [1];
+    shp->extents [2] = super->c [2] - 1.0 / super->w [2];
+    shp->extents [3] = super->c [0] + 1.0 / super->u [0];
+    shp->extents [4] = super->c [1] + 1.0 / super->v [1];
+    shp->extents [5] = super->c [2] + 1.0 / super->w [2];
+
+    shp->what = ELP;
+    shp->data = super;
+
+    out->ptr = shp;
   }
 
   return (PyObject*)out;

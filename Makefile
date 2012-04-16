@@ -1,6 +1,7 @@
 include Config.mak
 
 OB0 =   obj/input.o \
+	obj/polygon.o \
 	obj/octree.o \
 	obj/shape.o \
 
@@ -64,6 +65,9 @@ obj/render.o: render.c render.h oaktree.h error.h alg.h
 
 obj/input.o: input.c input.h oaktree.h error.h alg.h
 	$(CC) $(CFLAGS) $(PYTHON) -c -o $@ $<
+
+obj/polygon.o: polygon.c polygon.h error.h alg.h
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 obj/octree.o: octree.c oaktree.h error.h alg.h
 	$(CC) $(CFLAGS) -c -o $@ $<

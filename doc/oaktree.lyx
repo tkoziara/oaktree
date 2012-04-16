@@ -113,7 +113,7 @@ Input
 \end_layout
 
 \begin_layout Standard
-Oakree input is language extends 
+Oaktree input language extends 
 \begin_inset CommandInset href
 LatexCommand href
 name "Python"
@@ -128,6 +128,188 @@ target "http://www.python.org/"
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
+name "sub:SIMULATION"
+
+\end_inset
+
+SIMULATION
+\end_layout
+
+\begin_layout Standard
+SIMULATION object stores data specific to one distinct analysis.
+\end_layout
+
+\begin_layout Subsection*
+obj = SIMULATION (outpath, duration, step, grid, cutoff)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SIMULATION object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+outpath
+\series default
+ - output directory path
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+duration
+\series default
+ - simulation duration
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+step
+\series default
+ - time step
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+grid
+\series default
+ - regular size of octree grid
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+cutoff
+\series default
+ - cutoff length below which geometrical details are not resolved
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:MATERIAL"
+
+\end_inset
+
+MATERIAL
+\end_layout
+
+\begin_layout Standard
+MATERIAL associates a volume color with a solid material.
+\end_layout
+
+\begin_layout Subsection*
+MATERIAL (simu, vcolor, density, young, poisson)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+simu
+\series default
+ - simulation for which the material is defined
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+vcolor
+\series default
+ - volume color to which the material applies
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+density
+\series default
+ - mass density
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+young
+\series default
+ - Young's modulus
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+poisson
+\series default
+ - Poisson's ratio
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:INTERFACE"
+
+\end_inset
+
+INTERFACE
+\end_layout
+
+\begin_layout Standard
+INTERFACE defines contact properties between a pair of surfaces.
+\end_layout
+
+\begin_layout Subsection*
+INTERFACE (simu, scolor1, scolor2, friction, restitution)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+simu
+\series default
+ - simulation for which the interface is defined
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor1
+\series default
+ - first surface color
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor2
+\series default
+ - second surface color
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+friction
+\series default
+ - friction coefficient
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+restitution
+\series default
+ - impact restitution
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
 name "sub:SUPERELLIPSOID"
 
 \end_inset
@@ -136,7 +318,7 @@ SUPERELLIPSOID
 \end_layout
 
 \begin_layout Standard
-Superellipsoid is defined by the zero set of the implicit function
+A superellipsoid is defined by the zero set of the implicit function
 \end_layout
 
 \begin_layout Standard
@@ -145,51 +327,12 @@ F\left(x,y,z\right)=\left(\left|\frac{x}{a}\right|^{p}+\left|\frac{y}{b}\right|^
 
 \end_inset
 
-For an arbitrary center 
-\begin_inset Formula $\mathbf{c}$
-\end_inset
-
- and orientation 
-\begin_inset Formula $\left(\mathbf{u},\mathbf{v},\mathbf{w}\right)$
-\end_inset
-
- this takes form
-\end_layout
-
-\begin_layout Standard
-\begin_inset Formula \[
-F\left(\mathbf{x}\right)=\left(\left|\left(\mathbf{x}-\mathbf{c}\right)\cdot\mathbf{u}\right|^{p}+\left|\left(\mathbf{x}-\mathbf{c}\right)\cdot\mathbf{v}\right|^{p}\right)^{q/p}+\left|\left(\mathbf{x}-\mathbf{c}\right)\cdot\mathbf{w}\right|^{q}-1\]
-
-\end_inset
-
-where
-\end_layout
-
-\begin_layout Standard
-\begin_inset Formula \[
-\mathbf{u}\perp\mathbf{v}\perp\mathbf{w}\]
-
-\end_inset
-
-and
-\end_layout
-
-\begin_layout Standard
-\begin_inset Formula \[
-\left|\mathbf{u}\right|=\frac{1}{a},\left|\mathbf{v}\right|=\frac{1}{b},\left|\mathbf{w}\right|=\frac{1}{c}\mbox{.}\]
-
-\end_inset
-
-
+This routine creates a translated superellipsoid in an initial orientation
+ aligned with the global frame.
 \end_layout
 
 \begin_layout Subsection*
 obj = SUPERELLIPSOID (center, radii, r, t, vcolor, scolor)
-\end_layout
-
-\begin_layout Standard
-This routine creates a translated superellipsoid in an initial orientation
- aligned with the global frame.
 \end_layout
 
 \begin_layout Itemize
@@ -270,6 +413,720 @@ vcolor
 scolor
 \series default
  - integer surface color
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:SPHERE"
+
+\end_inset
+
+SPHERE
+\end_layout
+
+\begin_layout Standard
+A sphere shape.
+\end_layout
+
+\begin_layout Subsection*
+obj = SPHERE (center, r, vcolor, scolor)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+center
+\series default
+ - tuple 
+\emph on
+
+\begin_inset Formula $\left(x,y,z\right)$
+\end_inset
+
+
+\emph default
+ defining the center
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+r
+\series default
+ - radius
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+vcolor
+\series default
+ - integer volume color
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor
+\series default
+ - integer surface color
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:CYLINDER"
+
+\end_inset
+
+CYLINDER
+\end_layout
+
+\begin_layout Standard
+A cylinder shape.
+\end_layout
+
+\begin_layout Subsection*
+obj = CYLINDER (base, direc, r, h, vcolor, scolor)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+base
+\series default
+ - tuple 
+\emph on
+
+\begin_inset Formula $\left(x,y,z\right)$
+\end_inset
+
+
+\emph default
+ defining the base center
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+direc
+\series default
+ - tuple 
+\emph on
+
+\begin_inset Formula $\left(u,v,w\right)$
+\end_inset
+
+
+\emph default
+ defining the direction
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+r
+\series default
+ - radius
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+h
+\series default
+ - height
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+vcolor
+\series default
+ - integer volume color
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor
+\series default
+ - integer tuple 
+\begin_inset Formula $\left(s_{base},s_{side},s_{top}\right)$
+\end_inset
+
+of surface colors
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:CUBE"
+
+\end_inset
+
+CUBE
+\end_layout
+
+\begin_layout Standard
+A cube shape.
+\end_layout
+
+\begin_layout Subsection*
+obj = CUBE (corner, u, v, w, vcolor, scolor)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+corner
+\series default
+ - tuple 
+\emph on
+
+\begin_inset Formula $\left(x,y,z\right)$
+\end_inset
+
+
+\emph default
+ defining the minimum coordinate corner
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+u
+\series default
+ - length along 
+\begin_inset Formula $x$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+v
+\series default
+ - length along 
+\begin_inset Formula $y$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+w
+\series default
+ - length along 
+\begin_inset Formula $z$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+vcolor
+\series default
+ - integer volume color
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor
+\series default
+ - integer tuple 
+\begin_inset Formula $\left(s_{xmin},s_{xmax},s_{ymin},s_{ymax},s_{zmin},s_{zmax}\right)$
+\end_inset
+
+of surface colors
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:UNION"
+
+\end_inset
+
+UNION
+\end_layout
+
+\begin_layout Standard
+Set theoretic union of two shapes.
+\end_layout
+
+\begin_layout Subsection*
+obj = UNION (shape1, shape2)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape1
+\series default
+ - first input SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape2
+\series default
+ - second input SHAPE object
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:INTERSECTION"
+
+\end_inset
+
+INTERSECTION
+\end_layout
+
+\begin_layout Standard
+Set theoretic intersection of two shapes.
+\end_layout
+
+\begin_layout Subsection*
+obj = INTERSECTION (shape1, shape2)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape1
+\series default
+ - first input SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape2
+\series default
+ - second input SHAPE object
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:DIFFERENCE"
+
+\end_inset
+
+DIFFERENCE
+\end_layout
+
+\begin_layout Standard
+Set theoretic difference of two shapes.
+\end_layout
+
+\begin_layout Subsection*
+obj = DIFFERENCE (shape1, shape2)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape1
+\series default
+ - first input SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape2
+\series default
+ - second input SHAPE object
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:MOVE"
+
+\end_inset
+
+MOVE
+\end_layout
+
+\begin_layout Standard
+Move shape linearly.
+\end_layout
+
+\begin_layout Subsection*
+MOVE (shape, vector)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape
+\series default
+ - input SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+vector
+\series default
+ - tuple 
+\emph on
+
+\begin_inset Formula $\left(u,v,w\right)$
+\end_inset
+
+
+\emph default
+ defining the translation
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:ROTATE"
+
+\end_inset
+
+ROTATE
+\end_layout
+
+\begin_layout Standard
+Rotate shape about an axis.
+\end_layout
+
+\begin_layout Subsection*
+MOVE (shape, point, vector, angle)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape
+\series default
+ - input SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+point
+\series default
+ - tuple 
+\emph on
+
+\begin_inset Formula $\left(x,y,z\right)$
+\end_inset
+
+
+\emph default
+ defining axis point
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+vector
+\series default
+ - tuple 
+\emph on
+
+\begin_inset Formula $\left(u,v,w\right)$
+\end_inset
+
+
+\emph default
+ defining axis direction
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+angle
+\series default
+ - oriented angle in degrees
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:RIGID"
+
+\end_inset
+
+RIGID
+\end_layout
+
+\begin_layout Standard
+Rigid body is created in a simulation.
+\end_layout
+
+\begin_layout Subsection*
+obj = RIGID (simu, shape, label)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - BODY object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+simu
+\series default
+ - simulation in which the body is created
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape
+\series default
+ - body shape
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+label
+\series default
+ - body label
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:DEFORMABLE"
+
+\end_inset
+
+DEFORMABLE
+\end_layout
+
+\begin_layout Standard
+Deformable body is created in a simulation.
+\end_layout
+
+\begin_layout Subsection*
+obj = DEFORMABLE (simu, shape, label)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - BODY object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+simu
+\series default
+ - simulation in which the body is created
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape
+\series default
+ - body shape
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+label
+\series default
+ - body label
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:FIX"
+
+\end_inset
+
+FIX
+\end_layout
+
+\begin_layout Standard
+Fix surface.
+\end_layout
+
+\begin_layout Subsection*
+FIX (body, scolor)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+body
+\series default
+ - BODY object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor
+\series default
+ - surface to fix
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:VELOCITY"
+
+\end_inset
+
+VELOCITY
+\end_layout
+
+\begin_layout Standard
+Prescribe normal surface velocity
+\end_layout
+
+\begin_layout Subsection*
+VELOCITY (body, scolor, pressure)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+body
+\series default
+ - BODY object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor
+\series default
+ - surface to prescribe velocity to
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+pressure
+\series default
+ - constant value or Python function: 
+\emph on
+value = pressure (time)
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:PRESSURE"
+
+\end_inset
+
+PRESSURE
+\end_layout
+
+\begin_layout Standard
+Define surface pressure.
+\end_layout
+
+\begin_layout Subsection*
+PRESSURE (body, scolor, pressure)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+body
+\series default
+ - BODY object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor
+\series default
+ - surface to apply pressure
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+pressure
+\series default
+ - constant value or Python function: 
+\emph on
+value = pressure (time)
 \end_layout
 
 \begin_layout Chapter
