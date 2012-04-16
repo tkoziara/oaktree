@@ -5,7 +5,8 @@
 
 #include <stdlib.h>
 #include "oaktree.h"
-#include "err.h"
+#include "error.h"
+#include "alg.h"
 
 /* create octree down to a cutoff edge length */
 struct octree* octree_create (REAL extents [6], REAL cutoff)

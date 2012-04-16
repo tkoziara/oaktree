@@ -1,6 +1,6 @@
 /*
- * err.h
- * -----
+ * error.h
+ * -------
  */
 
 #ifndef __error__

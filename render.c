@@ -4,8 +4,8 @@
  */
 
 #include "render.h"
+#include "error.h"
 #include "alg.h"
-#include "err.h"
 
 /* polygonizer by Paul Brouke: http://paulbourke.net/geometry/polygonise/ */
 

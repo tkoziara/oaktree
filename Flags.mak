@@ -2,6 +2,12 @@
 # Compilation flags setup
 #
 
+ifeq ($(REAL),float)
+  REAL = -DREAL=float
+else
+  REAL = -DREAL=double
+endif
+
 ifeq ($(OPENGL),yes)
   ifeq ($(VBO),yes)
     OPENGL = -DOPENGL -DVBO $(GLINC)

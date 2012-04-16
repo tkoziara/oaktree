@@ -6,8 +6,6 @@
 #ifndef __oaktree__
 #define __oaktree__
 
-#define REAL float
-
 struct superellipsoid
 {
   REAL extents [6];

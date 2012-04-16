@@ -4,8 +4,8 @@
  */
 
 #include "oaktree.h"
+#include "error.h"
 #include "alg.h"
-#include "err.h"
 
 /* return distance to shape at given point, together with normal and color */
 REAL shape_evaluate (struct shape *shp, REAL *point)

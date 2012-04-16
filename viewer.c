@@ -16,9 +16,238 @@
 #include <time.h>
 #include <math.h>
 #include "viewer.h"
-#include "bmp.h"
+#include "error.h"
 #include "alg.h"
-#include "err.h"
+
+/* 
+ * bitmap and avi video output
+ */
+
+/* offsets to AVI header entries updated
+ * at the end of the write process */
+#define FILE_SIZE_OFFSET 4
+#define FRAMES_1_OFFSET 48
+#define FRAMES_2_OFFSET 140
+#define MOVIE_SIZE_OFFSET 216
+
+/* movie handle */
+struct avi
+{
+  FILE *file;
+  int width;
+  int height;  
+  int frames;
+};
+
+/* round up to the next 4-divisible width */
+static int ROUNDED_WIDTH (int width)
+{
+  width *= 3;
+  while (width % 4) width ++;
+  return width;
+}
+
+/* rounded up image size */
+#define ROUNDED_SIZE(width, height)\
+  (ROUNDED_WIDTH (width) * (height))
+
+/* little-endian DWORD output */
+static void DWORD (int32_t v, FILE *f)
+{
+  putc (v, f);
+  putc (v >> 8, f);
+  putc (v >> 16, f);
+  putc (v >> 24, f);
+}
+
+/* little-endian WORD output */
+static void WORD (int16_t v, FILE *f)
+{
+  putc (v, f);
+  putc (v >> 8, f);
+}
+
+/* string output (no byte reversal) */
+#define STRING(s, f) fwrite (s, 1, strlen (s), f)
+
+/* little-endian RGB data output */
+static void RGB (int w, int h, char *rgb, FILE *f)
+{
+  w = ROUNDED_WIDTH (w);
+  for (; h; h --)
+  {
+    for(char *b = rgb; b < rgb + w; b += 3)
+    {
+      char tmp = b [2];
+      b [2] = b [0];
+      b [0] = tmp;
+    }
+
+    fwrite (rgb, 1, w, f);
+    rgb += w;
+  }
+}
+
+/* allocate RGB buffer */
+static void* rgb_alloc (int width, int height)
+{
+  void *rgb;
+  ERRMEM (rgb = malloc (ROUNDED_SIZE (width, height)));
+  return rgb;
+}
+
+/* free the buffer */
+static void rgb_free (void *rgb)
+{ 
+  free (rgb);
+}
+
+/* output an RGB bitmap file (24 bits per pixel) */
+static void bmp_output (int width, int height, void *rgb, const char *path)
+{
+  FILE *f;
+
+  ASSERT (f = fopen (path, "wb"), "File open failed!");
+
+  WORD (0x4D42, f); /* BM magic */
+  DWORD (ROUNDED_SIZE (width, height) + 54, f); /* header size */
+  WORD (0, f); /* reserved */
+  WORD (0, f); /* reserved */
+  DWORD (54, f); /* offset to data */
+  DWORD (40, f); /* DIB header size */
+  DWORD (width, f);
+  DWORD (height, f);
+  WORD (1, f); /* number of planes */
+  WORD (24, f); /* bits per pixel */
+  DWORD (0, f); /* compression */
+  DWORD (0, f); /* image size (will be calculated) */
+  DWORD (0, f); /* horisontal pixels per meter */
+  DWORD (0, f); /* vertical ... */
+  DWORD (0, f); /* number of colors */
+  DWORD (0, f); /* number of important colors */
+  RGB (width, height, rgb, f);
+  fclose (f);
+}
+
+/* open an RGB avi file (24 bits per pixel, 'fps' frames per second) */
+static struct avi* avi_open (int width, int height, int fps, const char *path)
+{
+  struct avi *avi;
+  FILE *f;
+
+  ERRMEM (avi = calloc (1, sizeof (struct avi)));
+  ASSERT (avi->file = fopen (path, "wb"), "File open failed!");
+
+  avi->width = width;
+  avi->height = height;
+  avi->frames = 0;
+  f = avi->file;
+  
+  STRING ("RIFF", f);
+  DWORD (0, f); /* file size => updated at the end */
+  STRING ("AVI ", f);
+  STRING ("LIST", f);
+  DWORD (192, f); /* length of this list */
+  STRING ("hdrl", f); /* headers list */
+  STRING ("avih", f); /* avi header */
+  DWORD (56, f); /* size of this header */
+  DWORD (1000000.0 / (double)fps, f);
+  DWORD (0, f); /* maximal bytes per second (leave default) */
+  DWORD (0, f); /* reserved value */
+  DWORD (16, f); /* file will have an index */
+  DWORD (0, f); /* number of frames => updated at the end */
+  DWORD (0, f); /* initial number of frames */
+  DWORD (1, f); /* only one video stram */
+  DWORD (ROUNDED_SIZE (width, height), f);
+  DWORD (width, f);
+  DWORD (height, f);
+  DWORD (0, f); /* scale */
+  DWORD (0, f); /* rate */
+  DWORD (0, f); /* start */
+  DWORD (0, f); /* length */
+  STRING ("LIST", f);
+  DWORD (116, f); /* size of this list */
+  STRING ("strl", f); /* video stream list */
+  STRING ("strh", f);  /* video stream header */
+  DWORD (56, f); /* size of this header */
+  STRING ("vids", f);
+  STRING ("DIB ", f); /* Device Independent Bitmap */
+  DWORD (0, f); /* flags */
+  DWORD (0, f); /* priority */
+  DWORD (0, f); /* initial frames */
+  DWORD (1000000.0 / (double)fps, f); /* micro seconds per frame */
+  DWORD (1000000, f); /* rate */
+  DWORD (0, f); /* start */
+  DWORD (0, f); /* number of frames => updated at the end */
+  DWORD (ROUNDED_SIZE (width, height), f);
+  DWORD (0, f); /* quality */
+  DWORD (0, f); /* sample size */
+  DWORD (0, f); /* reserved */
+  WORD (width, f);
+  WORD (height, f);
+  STRING ("strf", f); /* video stream format */
+  DWORD (40, f); /* size of header */
+  DWORD (40, f); /* size of DIB header */
+  DWORD (width, f);
+  DWORD (height, f);
+  WORD (1, f); /* number of planes */
+  WORD (24, f); /* bits per pixel */
+  DWORD (0, f); /* compression */
+  DWORD (ROUNDED_SIZE (width, height), f); /* image size */
+  DWORD (0, f); /* pixels per meter along x */
+  DWORD (0, f); /* ... along y */
+  DWORD (0, f); /* number of colors */
+  DWORD (0, f); /* number of important colors */
+  STRING ("LIST", f);
+  DWORD (0, f); /* movie size => updated at the end */
+  STRING ("movi", f); /* the movie frames begin here */
+  return avi;
+}
+
+/* output one frame  */
+static void avi_frame (struct avi *avi, void *rgb)
+{
+  STRING ("00db", avi->file);
+  DWORD (ROUNDED_SIZE (avi->width, avi->height), avi->file);
+  RGB (avi->width, avi->height, rgb, avi->file);
+  avi->frames ++;
+}
+
+/* close the avi file */
+static void avi_close (struct avi *avi)
+{
+  int offset = 4, frame = avi->frames, index_size = frame * 16,
+    frame_size = ROUNDED_SIZE (avi->width, avi->height),
+    movie_size = 4 + (frame * (frame_size + 8)),
+    file_size = index_size + movie_size + 212;
+
+  STRING ("idx1", avi->file);
+  DWORD (index_size, avi->file);
+
+  for (frame = 0; frame < avi->frames; frame ++)
+  {
+    STRING ("00db", avi->file);
+    DWORD (16, avi->file);
+    DWORD (offset, avi->file);
+    DWORD (frame_size, avi->file);
+    offset += frame_size + 8;
+  }
+  
+  fseek (avi->file, FILE_SIZE_OFFSET, SEEK_SET);
+  DWORD (file_size, avi->file);
+  fseek (avi->file, FRAMES_1_OFFSET, SEEK_SET);
+  DWORD (avi->frames, avi->file);
+  fseek (avi->file, FRAMES_2_OFFSET, SEEK_SET);
+  DWORD (avi->frames, avi->file);
+  fseek (avi->file, MOVIE_SIZE_OFFSET, SEEK_SET);
+  DWORD (movie_size, avi->file);
+  fclose (avi->file);
+  free (avi);
+}
+
+/*
+ * GLUT output
+ */
 
 #define MAXPRINTLEN 2048
 
@@ -378,8 +607,8 @@ static void render2D ()
   glVertex2d (2, 22);
   glEnd ();
 
-  if (input.cursor) GLV_Print (8, 8, 0, GLV_FONT_10, "%s: %s|", input.title, input.text);
-  else GLV_Print (8, 8, 0, GLV_FONT_10, "%s: %s", input.title, input.text);
+  if (input.cursor) viewer_print (8, 8, 0, FONT_10, "%s: %s|", input.title, input.text);
+  else viewer_print (8, 8, 0, FONT_10, "%s: %s", input.title, input.text);
 
   glEnable (GL_LIGHTING);
   glEnable (GL_DEPTH_TEST);
@@ -411,10 +640,10 @@ static void render3D ()
 
   if (AVI)
   {
-    char *rgb = RGB_Alloc (width, height);
+    char *rgb = rgb_alloc (width, height);
     glReadPixels (0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, rgb);
-    AVI_Frame (AVI, rgb);
-    RGB_Free (rgb);
+    avi_frame (AVI, rgb);
+    rgb_free (rgb);
   }
 
   if (viewportscount)
@@ -484,7 +713,7 @@ static void mouse3D (int button, int state, int x, int y)
     break;
   }
 
-  GLV_Window_Title (NULL); /* default title */
+  viewer_window_title (NULL); /* default title */
 
 callback:
   if (user.mouse)
@@ -613,13 +842,13 @@ static void key3D (unsigned char key, int x, int y)
     if (key == '\r')
     {
       input.visible = 0;
-      GLV_Close_Viewport (input.id);
+      viewer_close_viewport (input.id);
       return;
     }
     else if (key == 27)
     {
       input.visible = 0;
-      GLV_Close_Viewport (input.id);
+      viewer_close_viewport (input.id);
       input.length = 0;
       input.text [0] = '\0';
       return;
@@ -703,11 +932,11 @@ static void bmp (char *path)
     if (strcmp (&path[len-4], ".bmp"))
       sprintf (&path [len], ".bmp");
    
-    rgb = RGB_Alloc (width, height);
+    rgb = rgb_alloc (width, height);
     updateall ();
     glReadPixels (0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, rgb);
-    BMP_Output (width, height, rgb, path);
-    RGB_Free (rgb);
+    bmp_output (width, height, rgb, path);
+    rgb_free (rgb);
   }
 }
 
@@ -720,8 +949,8 @@ static void avi (char *path)
   if (strcmp (&path[len-4], ".avi"))
   sprintf (&path [len], ".avi");
 
-  if (AVI) AVI_Close (AVI);
-  AVI = AVI_Open (width, height, 24, path);
+  if (AVI) avi_close (AVI);
+  AVI = avi_open (width, height, 24, path);
 }
 
 /* view menu */
@@ -860,15 +1089,15 @@ static void menu_export3D (int value)
     case MENU_EXPORT_AVI_START:
       glutSetMenu (export_menu);
       glutChangeToMenuEntry (1, "AVI STOP", MENU_EXPORT_AVI_STOP);
-      GLV_Read_Text ("AVI FILE NAME", avi);
+      viewer_read_text ("AVI FILE NAME", avi);
       break;
     case MENU_EXPORT_AVI_STOP:
       glutSetMenu (export_menu);
       glutChangeToMenuEntry (1, "AVI START", MENU_EXPORT_AVI_START);
-      if (AVI) { AVI_Close (AVI); AVI = NULL; }
+      if (AVI) { avi_close (AVI); AVI = NULL; }
       break;
     case MENU_EXPORT_BMP:
-      GLV_Read_Text ("BMP FILE NAME", bmp);
+      viewer_read_text ("BMP FILE NAME", bmp);
       break;
   }
 }
@@ -879,7 +1108,7 @@ static void menu3D (int value)
   switch (value)
   {
     case MENU_QUIT:
-      if (AVI) AVI_Close (AVI);
+      if (AVI) avi_close (AVI);
       if (user.quit)
 	user.quit ();
       exit (0);
@@ -911,7 +1140,7 @@ static void timer (int value)
 
 
 /* create main window */
-void GLV (
+void viewer (
   int *argc,
   char **argv,
   char *title,
@@ -986,7 +1215,7 @@ void GLV (
   glutAddMenuEntry ("quit", MENU_QUIT);
   glutAttachMenu (GLUT_RIGHT_BUTTON);
 
-  GLV_Window_Title (NULL);  /* default title */
+  viewer_window_title (NULL);  /* default title */
 
   printf ("LEFT MOUSE BUTTON (LMB) => TRACKBALL\n"
 	  "SHIFT + LMB => MOVE\n"
@@ -999,13 +1228,13 @@ void GLV (
 }
 
 /* redraw all */
-void GLV_Redraw_All (void)
+void viewer_redraw_all (void)
 { 
   updateall ();
 }
 
 /* reset scene extents */
-void GLV_Reset_Extents (REAL *extents)
+void viewer_reset_extents (REAL *extents)
 {
   View_Init init;
 
@@ -1017,7 +1246,7 @@ void GLV_Reset_Extents (REAL *extents)
 }
 
 /* update scene extents */
-void GLV_Update_Extents (REAL *extents)
+void viewer_update_extents (REAL *extents)
 {
   REAL a [3], b [3], rl, tb, nf, mx;
 
@@ -1047,7 +1276,7 @@ void GLV_Update_Extents (REAL *extents)
 }
 
 /* get minimal view extent */
-REAL GLV_Minimal_Extent ()
+REAL viewer_minimal_extent ()
 {
   REAL a = look.right - look.left,
 	 b = look.top - look.bottom;
@@ -1056,7 +1285,7 @@ REAL GLV_Minimal_Extent ()
 }
 
 /* get main window sizes */
-void GLV_Sizes (int *w, int *h)
+void viewer_sizes (int *w, int *h)
 {
   *w = width;
   *h = height;
@@ -1066,7 +1295,7 @@ void GLV_Sizes (int *w, int *h)
  * coordinate-to-pixel mapping;
  * window's content is not exported
  * in BMP and AVI format */
-int GLV_Open_Window (
+int viewer_open_window (
   int x,
   int y,
   int w,
@@ -1086,7 +1315,7 @@ int GLV_Open_Window (
 }
 
 /* close window */
-void GLV_Close_Window (int window)
+void viewer_close_window (int window)
 {
   for (int n = 0; n < windowscount; n ++)
   {
@@ -1104,7 +1333,7 @@ void GLV_Close_Window (int window)
 
 /* open a viewport whose content
  * is exported in BMP and AVI format */
-int GLV_Open_Viewport (
+int viewer_open_viewport (
   int x,
   int y,
   int w,
@@ -1150,7 +1379,7 @@ int GLV_Open_Viewport (
 }
 
 /* move viewport */
-void GLV_Move_Viewport (int viewport, int x, int y, int w, int h)
+void viewer_move_viewport (int viewport, int x, int y, int w, int h)
 {
   for (int n = 0; n < viewportscount; n ++)
   {
@@ -1166,7 +1395,7 @@ void GLV_Move_Viewport (int viewport, int x, int y, int w, int h)
 }
 
 /* resize viewport */
-void GLV_Resize_Viewport (int viewport, int w, int h)
+void viewer_resize_viewport (int viewport, int w, int h)
 {
   for (int n = 0; n < viewportscount; n ++)
   {
@@ -1180,7 +1409,7 @@ void GLV_Resize_Viewport (int viewport, int w, int h)
 }
 
 /* close viewport */
-void GLV_Close_Viewport (int viewport)
+void viewer_close_viewport (int viewport)
 {
   for (int n = 0; n < viewportscount; n ++)
   {
@@ -1197,9 +1426,9 @@ void GLV_Close_Viewport (int viewport)
 
 /* show tiled text intput window 
  * and return read text by callback */
-void GLV_Read_Text (char *title, void (*done) (char *text))
+void viewer_read_text (char *title, void (*done) (char *text))
 {
-  input.id = GLV_Open_Viewport (0, -(height / 2 - 6), -width, 24, 0, render2D);
+  input.id = viewer_open_viewport (0, -(height / 2 - 6), -width, 24, 0, render2D);
   input.title = title;
   input.done = done;
   input.cursor = 0;
@@ -1210,13 +1439,13 @@ void GLV_Read_Text (char *title, void (*done) (char *text))
 }
 
 /* check whether the last text reading is still active */
-int GLV_Reading_Text ()
+int viewer_reading_text ()
 {
   return input.visible;
 }
 
 /* output text at specified coordinates */
-void GLV_Print (REAL x, REAL y, REAL z, int font, char *fmt, ...)
+void viewer_print (REAL x, REAL y, REAL z, int font, char *fmt, ...)
 {
   va_list arg;
   char buff [MAXPRINTLEN];
@@ -1230,23 +1459,23 @@ void GLV_Print (REAL x, REAL y, REAL z, int font, char *fmt, ...)
 
   switch (font)
   {
-    case GLV_FONT_8_BY_13:
+    case FONT_8_BY_13:
       for (i = 0; buff[i]; i++)
 	glutBitmapCharacter (GLUT_BITMAP_8_BY_13, buff[i]);
       break;
-    case GLV_FONT_9_BY_15:
+    case FONT_9_BY_15:
       for (i = 0; buff[i]; i++)
 	glutBitmapCharacter (GLUT_BITMAP_9_BY_15, buff[i]);
       break;
-    case GLV_FONT_10:
+    case FONT_10:
       for (i = 0; buff[i]; i++)
 	glutBitmapCharacter (GLUT_BITMAP_HELVETICA_10, buff[i]); /* output characters */
       break;
-    case GLV_FONT_12:
+    case FONT_12:
       for (i = 0; buff[i]; i++)
 	glutBitmapCharacter (GLUT_BITMAP_HELVETICA_12, buff[i]);
       break;
-    case GLV_FONT_18:
+    case FONT_18:
       for (i = 0; buff[i]; i++)
 	glutBitmapCharacter (GLUT_BITMAP_HELVETICA_18, buff[i]);
       break;
@@ -1254,7 +1483,7 @@ void GLV_Print (REAL x, REAL y, REAL z, int font, char *fmt, ...)
 }
 
 /* get width of printed text in pixels */
-int GLV_Print_Width (int font, char *fmt, ...)
+int viewer_print_width (int font, char *fmt, ...)
 {
   va_list arg;
   char buff [MAXPRINTLEN];
@@ -1267,25 +1496,25 @@ int GLV_Print_Width (int font, char *fmt, ...)
 }
 
 /* output screen shot bitmap */
-void GLV_Screen_Bitmap (char *path)
+void viewer_screen_bitmap (char *path)
 { 
   bmp (path);
 }
 
 /* take over mouse */
-void GLV_Hold_Mouse ()
+void viewer_hold_mouse ()
 { 
   user.holdmouse = 1;
 }
 
 /* release mouse takeover */
-void GLV_Release_Mouse ()
+void viewer_release_mouse ()
 { 
   user.holdmouse = 0;
 }
 
 /* viewer specific projection matrix (useful for picking) */
-void GLV_SetProjectionMatrix (int w, int h)
+void viewer_set_projection_matrix (int w, int h)
 {
   switch (reshapemode)
   {
@@ -1320,7 +1549,7 @@ void GLV_SetProjectionMatrix (int w, int h)
 }
 
 /* enable drawing rectangle in screen coordinates */
-void GLV_Rectangle_On (int x1, int y1, int x2, int y2)
+void viewer_rectangle_on (int x1, int y1, int x2, int y2)
 {
   rectangle.enabled = 1;
   rectangle.x1 = MIN (x1, x2);
@@ -1331,19 +1560,19 @@ void GLV_Rectangle_On (int x1, int y1, int x2, int y2)
 }
 
 /* disable drawing rectangle */
-void GLV_Rectangle_Off ()
+void viewer_rectangle_off ()
 {
   rectangle.enabled = 0;
 }
 
 /* stop filming */
-void GLV_AVI_Stop ()
+void viewer_avi_stop ()
 {
-  if (AVI) { AVI_Close (AVI); AVI = NULL; }
+  if (AVI) { avi_close (AVI); AVI = NULL; }
 }
 
 /* set window title */
-void GLV_Window_Title (char *fmt, ...)
+void viewer_window_title (char *fmt, ...)
 {
   va_list arg;
   char buff [MAXPRINTLEN];
@@ -1376,7 +1605,7 @@ void GLV_Window_Title (char *fmt, ...)
 }
 
 /* set trackball center */
-void GLV_Trackball_Center (REAL *point)
+void viewer_trackball_center (REAL *point)
 {
   REAL a [3];
 

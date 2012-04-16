@@ -6,8 +6,7 @@ OB0 =   obj/input.o \
 
 ifeq ($(OPENGL),yes)
 
-OBJ =   obj/bmp.o \
-	obj/viewer.o \
+OBJ =   obj/viewer.o \
 	obj/render.o \
 	$(OB0) \
 
@@ -19,7 +18,7 @@ endif
 
 include Flags.mak
 
-CFLAGS = -std=c99 $(DEBUG) $(PROFILE)
+CFLAGS = -std=c99 $(DEBUG) $(PROFILE) $(REAL)
 
 LIB = -lm $(LAPACK) $(BLAS) $(GLLIB) $(PYTHONLIB)
 
@@ -57,28 +56,25 @@ clean:
 	rm -fr *dSYM
 	rm -fr *cubin
 
-obj/bmp.o: bmp.c bmp.h err.h
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-obj/viewer.o: viewer.c viewer.h bmp.h alg.h err.h
+obj/viewer.o: viewer.c viewer.h error.h alg.h
 	$(CC) $(CFLAGS) $(OPENGL) -c -o $@ $<
 
-obj/render.o: render.c render.h oaktree.h alg.h err.h
+obj/render.o: render.c render.h oaktree.h error.h alg.h
 	$(CC) $(CFLAGS) $(OPENGL) -c -o $@ $<
 
-obj/input.o: input.c input.h oaktree.h alg.h err.h
+obj/input.o: input.c input.h oaktree.h error.h alg.h
 	$(CC) $(CFLAGS) $(PYTHON) -c -o $@ $<
 
-obj/octree.o: octree.c oaktree.h alg.h err.h
+obj/octree.o: octree.c oaktree.h error.h alg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-obj/shape.o: shape.c oaktree.h alg.h err.h
+obj/shape.o: shape.c oaktree.h error.h alg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-obj/oaktree.o: oaktree.c oaktree.h viewer.h render.h input.h alg.h err.h
+obj/oaktree.o: oaktree.c oaktree.h viewer.h render.h input.h error.h alg.h
 	$(CC) $(CFLAGS) $(OPENGL) -c -o $@ $<
 
 # MPI
 
-obj/oaktree-mpi.o: oaktree.c oaktree.h input.h alg.h err.h
+obj/oaktree-mpi.o: oaktree.c oaktree.h input.h error.h alg.h
 	$(CC) $(CFLAGS) $(MPIFLG) -c -o $@ $<

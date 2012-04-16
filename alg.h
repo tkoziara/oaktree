@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "oaktree.h"
-
 #ifndef __alg__
 #define __alg__
 

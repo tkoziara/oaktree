@@ -1,4 +1,10 @@
 #
+# double / float
+#
+
+REAL = float
+
+#
 # Specify C compiler
 #
 

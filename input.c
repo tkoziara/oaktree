@@ -7,8 +7,8 @@
 #include <structmember.h>
 #include "oaktree.h"
 #include "input.h"
+#include "error.h"
 #include "alg.h"
-#include "err.h"
 
 #ifndef Py_RETURN_FALSE
 #define Py_RETURN_FALSE return Py_INCREF(Py_False), Py_False
@@ -87,36 +87,36 @@ static int is_tuple (PyObject *obj, char *var, int len)
  * SHAPE
  */
 
-static PyTypeObject lng_SHAPE_TYPE;
+static PyTypeObject SHAPE_TYPE;
 
 typedef struct {
   PyObject_HEAD
   struct shape *shp;
-} lng_SHAPE;
+} SHAPE;
 
 /* constructor */
-static PyObject* lng_SHAPE_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
+static PyObject* SHAPE_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
   PyErr_SetString (PyExc_RuntimeError, "Cannot create unspecified shape!");
   return NULL;
 }
 
 /* destructor */
-static void lng_SHAPE_dealloc (lng_SHAPE *self)
+static void SHAPE_dealloc (SHAPE *self)
 {
   self->ob_type->tp_free ((PyObject*)self);
 }
 
 /* SHAPE methods */
-static PyMethodDef lng_SHAPE_methods [] =
+static PyMethodDef SHAPE_methods [] =
 { {NULL, NULL, 0, NULL} };
 
 /* SHAPE members */
-static PyMemberDef lng_SHAPE_members [] =
+static PyMemberDef SHAPE_members [] =
 { {NULL, 0, 0, 0, NULL} };
 
 /* SHAPE getset */
-static PyGetSetDef lng_SHAPE_getset [] =
+static PyGetSetDef SHAPE_getset [] =
 { {NULL, 0, 0, NULL, NULL} };
 
 /*
@@ -124,15 +124,15 @@ static PyGetSetDef lng_SHAPE_getset [] =
  */
 
 /* create superellipsoid */
-static PyObject* lng_SUPERELLIPSOID (PyObject *self, PyObject *args, PyObject *kwds)
+static PyObject* SUPERELLIPSOID (PyObject *self, PyObject *args, PyObject *kwds)
 {
   KEYWORDS ("center", "radii", "r", "t", "color");
   PyObject *center, *radii;
-  lng_SHAPE *out;
+  SHAPE *out;
   double r, t;
   int color;
 
-  out = (lng_SHAPE*)lng_SHAPE_TYPE.tp_alloc (&lng_SHAPE_TYPE, 0);
+  out = (SHAPE*)SHAPE_TYPE.tp_alloc (&SHAPE_TYPE, 0);
 
   if (out)
   {
@@ -144,9 +144,9 @@ static PyObject* lng_SUPERELLIPSOID (PyObject *self, PyObject *args, PyObject *k
   return (PyObject*)out;
 }
 
-static PyMethodDef lng_methods [] =
+static PyMethodDef methods [] =
 {
-  {"SUPERELLIPSOID", (PyCFunction)lng_SUPERELLIPSOID, METH_VARARGS|METH_KEYWORDS, "Create superellipsoid"},
+  {"SUPERELLIPSOID", (PyCFunction)SUPERELLIPSOID, METH_VARARGS|METH_KEYWORDS, "Create superellipsoid"},
   {NULL, 0, 0, NULL}
 };
 
@@ -158,17 +158,17 @@ static void initinput (void)
 {
   PyObject *m;
 
-  TYPEINIT (lng_SHAPE_TYPE, lng_SHAPE, "solfec.SHAPE",
-    Py_TPFLAGS_DEFAULT, lng_SHAPE_dealloc, lng_SHAPE_new,
-    lng_SHAPE_methods, lng_SHAPE_members, lng_SHAPE_getset);
+  TYPEINIT (SHAPE_TYPE, SHAPE, "solfec.SHAPE",
+    Py_TPFLAGS_DEFAULT, SHAPE_dealloc, SHAPE_new,
+    SHAPE_methods, SHAPE_members, SHAPE_getset);
 
-  if (PyType_Ready (&lng_SHAPE_TYPE) < 0) return;
+  if (PyType_Ready (&SHAPE_TYPE) < 0) return;
 
-  if (!(m =  Py_InitModule3 ("oaktree", lng_methods, "oaktree module"))) return;
+  if (!(m =  Py_InitModule3 ("oaktree", methods, "oaktree module"))) return;
 
-  Py_INCREF (&lng_SHAPE_TYPE);
+  Py_INCREF (&SHAPE_TYPE);
 
-  PyModule_AddObject (m, "SHAPE", (PyObject*)&lng_SHAPE_TYPE);
+  PyModule_AddObject (m, "SHAPE", (PyObject*)&SHAPE_TYPE);
 }
 
 /* 
