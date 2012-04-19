@@ -143,8 +143,8 @@ static PyObject* SUPERELLIPSOID (PyObject *self, PyObject *args, PyObject *kwds)
   KEYWORDS ("center", "radii", "p", "q", "vcolor", "scolor");
   struct superellipsoid *super;
   PyObject *center, *radii;
+  struct shape *shape;
   int vcolor, scolor;
-  struct shape *shp;
   double p, q;
   SHAPE *out;
 
@@ -176,19 +176,19 @@ static PyObject* SUPERELLIPSOID (PyObject *self, PyObject *args, PyObject *kwds)
     super->vcolor = vcolor;
     super->scolor = scolor;
 
-    ERRMEM (shp = calloc (1, sizeof (struct shape)));
+    ERRMEM (shape = calloc (1, sizeof (struct shape)));
 
-    shp->extents [0] = super->c [0] - 1.0 / super->u [0];
-    shp->extents [1] = super->c [1] - 1.0 / super->v [1];
-    shp->extents [2] = super->c [2] - 1.0 / super->w [2];
-    shp->extents [3] = super->c [0] + 1.0 / super->u [0];
-    shp->extents [4] = super->c [1] + 1.0 / super->v [1];
-    shp->extents [5] = super->c [2] + 1.0 / super->w [2];
+    shape->extents [0] = super->c [0] - 1.0 / super->u [0];
+    shape->extents [1] = super->c [1] - 1.0 / super->v [1];
+    shape->extents [2] = super->c [2] - 1.0 / super->w [2];
+    shape->extents [3] = super->c [0] + 1.0 / super->u [0];
+    shape->extents [4] = super->c [1] + 1.0 / super->v [1];
+    shape->extents [5] = super->c [2] + 1.0 / super->w [2];
 
-    shp->what = ELP;
-    shp->data = super;
+    shape->what = ELP;
+    shape->data = super;
 
-    out->ptr = shp;
+    out->ptr = shape;
   }
 
   return (PyObject*)out;

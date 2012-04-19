@@ -140,7 +140,7 @@ SIMULATION object stores data specific to one distinct analysis.
 \end_layout
 
 \begin_layout Subsection*
-obj = SIMULATION (outpath, duration, step, grid, cutoff)
+obj = SIMULATION (outpath, duration, step, grid, cutoff, extents)
 \end_layout
 
 \begin_layout Itemize
@@ -191,6 +191,22 @@ cutoff
  - cutoff length below which geometrical details are not resolved
 \end_layout
 
+\begin_layout Itemize
+
+\series bold
+extents
+\series default
+ - tuple 
+\begin_inset Formula $\left(x_{min},y_{min},z_{min},x_{max},y_{max},z_{max}\right)$
+\end_inset
+
+ of domain bounds
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
@@ -201,7 +217,7 @@ name "sub:MATERIAL"
 MATERIAL
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 MATERIAL associates a volume color with a solid material.
 \end_layout
 
@@ -249,6 +265,12 @@ poisson
  - Poisson's ratio
 \end_layout
 
+\end_inset
+
+
+\begin_inset Note Note
+status open
+
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
@@ -259,7 +281,7 @@ name "sub:INTERFACE"
 INTERFACE
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 INTERFACE defines contact properties between a pair of surfaces.
 \end_layout
 
@@ -305,6 +327,11 @@ friction
 restitution
 \series default
  - impact restitution
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
@@ -415,6 +442,10 @@ scolor
  - integer surface color
 \end_layout
 
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
@@ -425,7 +456,7 @@ name "sub:SPHERE"
 SPHERE
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 A sphere shape.
 \end_layout
 
@@ -481,6 +512,12 @@ scolor
  - integer surface color
 \end_layout
 
+\end_inset
+
+
+\begin_inset Note Note
+status open
+
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
@@ -491,7 +528,7 @@ name "sub:CYLINDER"
 CYLINDER
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 A cylinder shape.
 \end_layout
 
@@ -575,6 +612,12 @@ scolor
 of surface colors
 \end_layout
 
+\end_inset
+
+
+\begin_inset Note Note
+status open
+
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
@@ -585,7 +628,7 @@ name "sub:CUBE"
 CUBE
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 A cube shape.
 \end_layout
 
@@ -671,6 +714,11 @@ scolor
 \end_inset
 
 of surface colors
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
@@ -914,15 +962,15 @@ name "sub:RIGID"
 
 \end_inset
 
-RIGID
+SOLID
 \end_layout
 
 \begin_layout Standard
-Rigid body is created in a simulation.
+A solid is created in a simulation.
 \end_layout
 
 \begin_layout Subsection*
-obj = RIGID (simu, shape, label)
+obj = SOLID (simu, shape, label)
 \end_layout
 
 \begin_layout Itemize
@@ -930,7 +978,7 @@ obj = RIGID (simu, shape, label)
 \series bold
 obj
 \series default
- - BODY object
+ - SOLID object
 \end_layout
 
 \begin_layout Itemize
@@ -938,7 +986,7 @@ obj
 \series bold
 simu
 \series default
- - simulation in which the body is created
+ - simulation in which the solid is created
 \end_layout
 
 \begin_layout Itemize
@@ -946,7 +994,7 @@ simu
 \series bold
 shape
 \series default
- - body shape
+ - solid shape
 \end_layout
 
 \begin_layout Itemize
@@ -954,58 +1002,12 @@ shape
 \series bold
 label
 \series default
- - body label
-\end_layout
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:DEFORMABLE"
-
-\end_inset
-
-DEFORMABLE
+ - solid label
 \end_layout
 
 \begin_layout Standard
-Deformable body is created in a simulation.
-\end_layout
-
-\begin_layout Subsection*
-obj = DEFORMABLE (simu, shape, label)
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-obj
-\series default
- - BODY object
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-simu
-\series default
- - simulation in which the body is created
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-shape
-\series default
- - body shape
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-label
-\series default
- - body label
-\end_layout
+\begin_inset Note Note
+status open
 
 \begin_layout Section
 \begin_inset CommandInset label
@@ -1017,7 +1019,7 @@ name "sub:FIX"
 FIX
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Fix surface.
 \end_layout
 
@@ -1041,6 +1043,14 @@ scolor
  - surface to fix
 \end_layout
 
+\end_inset
+
+
+\emph on
+
+\begin_inset Note Note
+status open
+
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
@@ -1051,7 +1061,7 @@ name "sub:VELOCITY"
 VELOCITY
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Prescribe normal surface velocity
 \end_layout
 
@@ -1085,6 +1095,12 @@ pressure
 value = pressure (time)
 \end_layout
 
+\end_inset
+
+
+\begin_inset Note Note
+status open
+
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
@@ -1095,7 +1111,7 @@ name "sub:PRESSURE"
 PRESSURE
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 Define surface pressure.
 \end_layout
 
@@ -1127,6 +1143,11 @@ pressure
  - constant value or Python function: 
 \emph on
 value = pressure (time)
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Chapter

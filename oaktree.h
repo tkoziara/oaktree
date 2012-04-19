@@ -13,6 +13,12 @@ struct superellipsoid
   short vcolor, scolor;
 };
 
+#if 0
+struct warp /* space warp solely defines physical deformation */
+{
+};
+#endif
+
 struct shape /* general shape */
 {
   REAL extents [6];
@@ -27,7 +33,7 @@ struct shape /* general shape */
 };
 
 /* return distance to shape at given point */
-REAL shape_evaluate (struct shape *shp, REAL *point);
+REAL shape_evaluate (struct shape *shape, REAL *point);
 
 struct contact
 {
@@ -35,7 +41,7 @@ struct contact
 
   short color [2];
 
-  struct shape *shp [2];
+  struct shape *shape [2];
 
   struct contact *next;
 };
@@ -46,7 +52,7 @@ struct octcut
 
   short color;
 
-  struct shape *shp;
+  struct shape *shape;
 
   struct octcut *next;
 };
@@ -73,5 +79,18 @@ struct contact* octree_extract_contacts (struct octree *oct, REAL cutoff);
 
 /* free octree memory */
 void octree_destroy (struct octree *oct);
+
+struct simulation
+{
+  char *outpath;
+
+  REAL duration, step;
+
+  REAL grid, cutoff;
+
+  REAL extents [6];
+
+  struct shape *shape;
+};
 
 #endif
