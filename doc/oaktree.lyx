@@ -200,7 +200,7 @@ extents
 \begin_inset Formula $\left(x_{min},y_{min},z_{min},x_{max},y_{max},z_{max}\right)$
 \end_inset
 
- of domain bounds
+ of domain extents beyond which bodies are deleted
 \end_layout
 
 \begin_layout Standard
@@ -332,117 +332,6 @@ restitution
 \end_inset
 
 
-\end_layout
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:SUPERELLIPSOID"
-
-\end_inset
-
-SUPERELLIPSOID
-\end_layout
-
-\begin_layout Standard
-A superellipsoid is defined by the zero set of the implicit function
-\end_layout
-
-\begin_layout Standard
-\begin_inset Formula \[
-F\left(x,y,z\right)=\left(\left|\frac{x}{a}\right|^{p}+\left|\frac{y}{b}\right|^{p}\right)^{q/p}+\left|\frac{z}{c}\right|^{q}-1\mbox{.}\]
-
-\end_inset
-
-This routine creates a translated superellipsoid in an initial orientation
- aligned with the global frame.
-\end_layout
-
-\begin_layout Subsection*
-obj = SUPERELLIPSOID (center, radii, r, t, vcolor, scolor)
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-obj
-\series default
- - SHAPE object
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-center
-\series default
- - tuple 
-\emph on
-
-\begin_inset Formula $\left(x,y,z\right)$
-\end_inset
-
-
-\emph default
- defining the center
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-radii
-\series default
- - tuple 
-\emph on
-
-\begin_inset Formula $\left(a,b,c\right)$
-\end_inset
-
-
-\emph default
- defining the radii
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-p
-\series default
- - exponent 
-\begin_inset Formula $p$
-\end_inset
-
-
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-q
-\series default
- - exponent 
-\begin_inset Formula $q$
-\end_inset
-
-
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-vcolor
-\series default
- - integer volume color
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-scolor
-\series default
- - integer surface color
-\end_layout
-
-\begin_layout Standard
 \begin_inset Note Note
 status open
 
@@ -615,8 +504,7 @@ of surface colors
 \end_inset
 
 
-\begin_inset Note Note
-status open
+\end_layout
 
 \begin_layout Section
 \begin_inset CommandInset label
@@ -628,7 +516,7 @@ name "sub:CUBE"
 CUBE
 \end_layout
 
-\begin_layout Plain Layout
+\begin_layout Standard
 A cube shape.
 \end_layout
 
@@ -710,15 +598,10 @@ vcolor
 scolor
 \series default
  - integer tuple 
-\begin_inset Formula $\left(s_{xmin},s_{xmax},s_{ymin},s_{ymax},s_{zmin},s_{zmax}\right)$
+\begin_inset Formula $\left(s_{xmin},s_{ymax},s_{zmin},s_{xmax},s_{ymax},s_{zmax}\right)$
 \end_inset
 
-of surface colors
-\end_layout
-
-\end_inset
-
-
+ of surface colors
 \end_layout
 
 \begin_layout Section

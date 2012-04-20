@@ -137,58 +137,28 @@ static PyGetSetDef SHAPE_getset [] =
  * SUBROUTINES
  */
 
-/* create superellipsoid */
-static PyObject* SUPERELLIPSOID (PyObject *self, PyObject *args, PyObject *kwds)
+/* create cube */
+static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
 {
-  KEYWORDS ("center", "radii", "p", "q", "vcolor", "scolor");
-  struct superellipsoid *super;
-  PyObject *center, *radii;
-  struct shape *shape;
-  int vcolor, scolor;
-  double p, q;
+  KEYWORDS ("corner", "u", "v", "w", "vcolor", "scolor");
+  //struct halfplane *halfplane;
+  PyObject *corner, *scolor;
+  //struct shape *shape;
+  double u, v, w;
+  int vcolor;
   SHAPE *out;
 
   out = (SHAPE*)SHAPE_TYPE.tp_alloc (&SHAPE_TYPE, 0);
 
   if (out)
   {
-    PARSEKEYS ("OOddii", &center, &radii, &p, &q, &vcolor, &scolor);
+    PARSEKEYS ("OdddiO", &corner, &u, &v, &w, &vcolor, &scolor);
 
-    TYPETEST (is_tuple (center, kwl[0], 3) && is_tuple (radii, kwl[1], 3) &&
-	      is_positive (p, kwl [2]) && is_positive (q, kwl [3]));
+    TYPETEST (is_tuple (corner, kwl[0], 3) && is_positive (u, kwl [1]) &&
+	      is_positive (v, kwl [2]) && is_positive (v, kwl [3]) &&
+	      is_tuple (corner, kwl[5], 3));
 
-    ERRMEM (super = malloc (sizeof (struct superellipsoid)));
-
-    super->c [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 0));
-    super->c [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 1));
-    super->c [2] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 2));
-
-    super->u [0] = 1.0 / (REAL) PyFloat_AsDouble (PyTuple_GetItem (radii, 0));
-    super->v [1] = 1.0 / (REAL) PyFloat_AsDouble (PyTuple_GetItem (radii, 1));
-    super->w [2] = 1.0 / (REAL) PyFloat_AsDouble (PyTuple_GetItem (radii, 2));
-    super->u [1] = super->u [2] = 0.0;
-    super->v [0] = super->v [2] = 0.0;
-    super->w [0] = super->w [1] = 0.0;
-
-    super->p = p;
-    super->q = q;
-
-    super->vcolor = vcolor;
-    super->scolor = scolor;
-
-    ERRMEM (shape = calloc (1, sizeof (struct shape)));
-
-    shape->extents [0] = super->c [0] - 1.0 / super->u [0];
-    shape->extents [1] = super->c [1] - 1.0 / super->v [1];
-    shape->extents [2] = super->c [2] - 1.0 / super->w [2];
-    shape->extents [3] = super->c [0] + 1.0 / super->u [0];
-    shape->extents [4] = super->c [1] + 1.0 / super->v [1];
-    shape->extents [5] = super->c [2] + 1.0 / super->w [2];
-
-    shape->what = ELP;
-    shape->data = super;
-
-    out->ptr = shape;
+    /* TODO */
   }
 
   return (PyObject*)out;
@@ -196,7 +166,7 @@ static PyObject* SUPERELLIPSOID (PyObject *self, PyObject *args, PyObject *kwds)
 
 static PyMethodDef methods [] =
 {
-  {"SUPERELLIPSOID", (PyCFunction)SUPERELLIPSOID, METH_VARARGS|METH_KEYWORDS, "Create superellipsoid"},
+  {"CUBE", (PyCFunction)CUBE, METH_VARARGS|METH_KEYWORDS, "Create cube"},
   {NULL, 0, 0, NULL}
 };
 
@@ -239,7 +209,7 @@ int input (const char *path)
   initinput ();
 
   PyRun_SimpleString("from oaktree import SHAPE\n"
-                     "from oaktree import SUPERELLIPSOID\n");
+                     "from oaktree import CUBE\n");
 
   ERRMEM (line = malloc (128 + strlen (path)));
   sprintf (line, "execfile ('%s')", path);

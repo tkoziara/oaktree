@@ -6,26 +6,22 @@
 #ifndef __oaktree__
 #define __oaktree__
 
-struct superellipsoid
+struct halfplane
 {
-  REAL c [3], u [3], v [3], w [3], p, q; /* F(x) = (|<c-x,u>|**p + |<c-x,v>|**p)**(q/p) + |<c-x,w>|**q - 1 */
+  REAL p [3], n [3];
 
-  short vcolor, scolor;
+  short scolor;
 };
 
-#if 0
-struct warp /* space warp solely defines physical deformation */
-{
-};
-#endif
-
-struct shape /* general shape */
+struct shape
 {
   REAL extents [6];
 
-  enum {ADD, MUL, SUB, ELP} what;
+  enum {ADD, MUL, SUB, HPL} what;
 
   void *data;
+
+  short vcolor;
 
   struct shape *left, *right;
 
@@ -34,17 +30,6 @@ struct shape /* general shape */
 
 /* return distance to shape at given point */
 REAL shape_evaluate (struct shape *shape, REAL *point);
-
-struct contact
-{
-  REAL p [3], n [3];
-
-  short color [2];
-
-  struct shape *shape [2];
-
-  struct contact *next;
-};
 
 struct octcut
 {
@@ -63,8 +48,6 @@ struct octree
 
   struct octcut *cut;
 
-  struct contact *con;
-
   struct octree *up, *down [8];
 };
 
@@ -73,9 +56,6 @@ struct octree* octree_create (REAL extents [6], REAL cutoff);
 
 /* insert list of shape and refine octree down to a cutoff edge length */
 void octree_insert_shapes (struct octree *oct, struct shape *list, REAL cutoff);
-
-/* extract contact points and coarsen them up to a cutoff distance */
-struct contact* octree_extract_contacts (struct octree *oct, REAL cutoff);
 
 /* free octree memory */
 void octree_destroy (struct octree *oct);

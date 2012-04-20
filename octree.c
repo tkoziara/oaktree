@@ -19,12 +19,6 @@ void octree_insert_shapes (struct octree *oct, struct shape *list, REAL cutoff)
 {
 }
 
-/* extract contact points and coarsen them up to a cutoff distance */
-struct contact* octree_extract_contacts (struct octree *oct, REAL cutoff)
-{
-  return NULL;
-}
-
 /* free octree memory */
 void octree_destroy (struct octree *oct)
 {
