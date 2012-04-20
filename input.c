@@ -41,6 +41,23 @@ memset (&(typedesc), 0, sizeof (PyTypeObject));\
  * utilities
  */
 
+/* string test */
+static int is_string (PyObject *obj, char *var)
+{
+  if (obj)
+  {
+    if (!PyString_Check (obj))
+    {
+      char buf [BUFLEN];
+      sprintf (buf, "'%s' must be a string", var);
+      PyErr_SetString (PyExc_TypeError, buf);
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
 /* positive test */
 static int is_positive (double num, char *var)
 {
@@ -63,7 +80,7 @@ static int is_tuple (PyObject *obj, char *var, int len)
     if (!PyTuple_Check (obj))
     {
       char buf [BUFLEN];
-      snprintf (buf, BUFLEN, "'%s' must be a tuple object", var);
+      snprintf (buf, BUFLEN, "'%s' must be a tuple", var);
       PyErr_SetString (PyExc_TypeError, buf);
       return 0;
     }
@@ -98,6 +115,95 @@ static int is_tuple (PyObject *obj, char *var, int len)
 #define ELSE else
 
 /*
+ * SIMULATION
+ */
+
+static PyTypeObject SIMULATION_TYPE;
+
+typedef struct {
+  PyObject_HEAD
+  struct simulation *ptr;
+} SIMULATION;
+
+/* SIMULATION test */
+static int is_simulation (SIMULATION *obj, char *var)
+{
+  if (obj)
+  {
+    if (!PyObject_IsInstance ((PyObject*)obj, (PyObject*)&SIMULATION_TYPE))
+    {
+      char buf [BUFLEN];
+      sprintf (buf, "'%s' must be a SIMULATION", var);
+      PyErr_SetString (PyExc_TypeError, buf);
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+/* constructor */
+static PyObject* SIMULATION_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("outpath", "duration", "step", "grid", "cutoff", "extents");
+  double duration, step, grid, cutoff;
+  PyObject *outpath, *extents;
+  struct simulation *simu;
+  SIMULATION *self;
+
+  self = (SIMULATION*)type->tp_alloc (type, 0);
+
+  if (self)
+  {
+    PARSEKEYS ("OddddO", &outpath, &duration, &step, &grid, &cutoff, &extents);
+
+    TYPETEST (is_string (outpath, kwl [0]) && is_positive (duration, kwl[1]) &&
+	      is_positive (step, kwl[2]) && is_positive (grid, kwl[3]) &&
+	      is_positive (cutoff, kwl[4]) && is_tuple (extents, kwl[5], 6));
+
+    ERRMEM (simu = calloc (1, sizeof (struct simulation)));
+    ERRMEM (simu->outpath = malloc (sizeof (char [strlen (PyString_AsString (outpath))])));
+    strcpy (simu->outpath, PyString_AsString (outpath));
+    simu->duration = duration;
+    simu->step = step;
+    simu->grid = grid;
+    simu->cutoff = cutoff;
+    simu->extents [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 0));
+    simu->extents [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 1));
+    simu->extents [2] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 2));
+    simu->extents [3] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 3));
+    simu->extents [4] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 4));
+    simu->extents [5] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 5));
+
+    self->ptr = simu;
+
+    if (simulation) simulation->prev = simu;
+    simu->next = simulation;
+    simulation = simu; /* insert into global list */
+  }
+
+  return (PyObject*)self;
+}
+
+/* destructor */
+static void SIMULATION_dealloc (SIMULATION *self)
+{
+  self->ob_type->tp_free ((PyObject*)self);
+}
+
+/* SIMULATION methods */
+static PyMethodDef SIMULATION_methods [] =
+{ {NULL, NULL, 0, NULL} };
+
+/* SIMULATION members */
+static PyMemberDef SIMULATION_members [] =
+{ {NULL, 0, 0, 0, NULL} };
+
+/* SIMULATION getset */
+static PyGetSetDef SIMULATION_getset [] =
+{ {NULL, 0, 0, NULL, NULL} };
+
+/*
  * SHAPE
  */
 
@@ -107,6 +213,23 @@ typedef struct {
   PyObject_HEAD
   struct shape *ptr;
 } SHAPE;
+
+/* SHAPE test */
+static int is_shape (SHAPE *obj, char *var)
+{
+  if (obj)
+  {
+    if (!PyObject_IsInstance ((PyObject*)obj, (PyObject*)&SHAPE_TYPE))
+    {
+      char buf [BUFLEN];
+      sprintf (buf, "'%s' must be a SHAPE", var);
+      PyErr_SetString (PyExc_TypeError, buf);
+      return 0;
+    }
+  }
+
+  return 1;
+}
 
 /* constructor */
 static PyObject* SHAPE_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
@@ -141,10 +264,11 @@ static PyGetSetDef SHAPE_getset [] =
 static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
 {
   KEYWORDS ("corner", "u", "v", "w", "vcolor", "scolor");
-  //struct halfplane *halfplane;
+  struct shape *shape, *a, *b, *c, *d, *e, *f;
   PyObject *corner, *scolor;
-  //struct shape *shape;
+  struct halfplane *h;
   double u, v, w;
+  double p [3];
   int vcolor;
   SHAPE *out;
 
@@ -155,18 +279,115 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     PARSEKEYS ("OdddiO", &corner, &u, &v, &w, &vcolor, &scolor);
 
     TYPETEST (is_tuple (corner, kwl[0], 3) && is_positive (u, kwl [1]) &&
-	      is_positive (v, kwl [2]) && is_positive (v, kwl [3]) &&
+	      is_positive (v, kwl [2]) && is_positive (w, kwl [3]) &&
 	      is_tuple (corner, kwl[5], 3));
 
-    /* TODO */
+    p [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (corner, 0));
+    p [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (corner, 1)); 
+    p [2] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (corner, 2));
+
+    /* -1, 0, 0 */
+    ERRMEM (a = calloc (1, sizeof (struct shape)));
+    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    VECTOR (h->p, p[0], p[1], p[2]);
+    VECTOR (h->n, -1, 0, 0);
+    h->vcolor = vcolor;
+    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
+    a->what = HPL;
+    a->data = h;
+
+   /* 0, -1, 0 */
+    ERRMEM (b = calloc (1, sizeof (struct shape)));
+    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    VECTOR (h->p, p[0], p[1], p[2]);
+    VECTOR (h->n, 0, -1, 0);
+    h->vcolor = vcolor;
+    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
+    b->what = HPL;
+    b->data = h;
+
+    /* 0, 0, -1 */
+    ERRMEM (c = calloc (1, sizeof (struct shape)));
+    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    VECTOR (h->p, p[0], p[1], p[2]);
+    VECTOR (h->n, 0, 0, -1);
+    h->vcolor = vcolor;
+    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
+    c->what = HPL;
+    c->data = h;
+
+    /* 1, 0, 0 */
+    ERRMEM (d = calloc (1, sizeof (struct shape)));
+    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    VECTOR (h->p, p[0]+u, p[1], p[2]);
+    VECTOR (h->n, 1, 0, 0);
+    h->vcolor = vcolor;
+    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 3));
+    d->what = HPL;
+    d->data = h;
+
+   /* 0, 1, 0 */
+    ERRMEM (e = calloc (1, sizeof (struct shape)));
+    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    VECTOR (h->p, p[0], p[1]+v, p[2]);
+    VECTOR (h->n, 0, 1, 0);
+    h->vcolor = vcolor;
+    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 4));
+    e->what = HPL;
+    e->data = h;
+
+    /* 0, 0, 1 */
+    ERRMEM (f = calloc (1, sizeof (struct shape)));
+    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    VECTOR (h->p, p[0], p[1], p[2]+w);
+    VECTOR (h->n, 0, 0, 1);
+    h->vcolor = vcolor;
+    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 5));
+    f->what = HPL;
+    f->data = h;
+
+    shape = shape_combine (shape_combine (a, MUL, b), MUL,
+	    shape_combine (shape_combine (c, MUL, d), MUL,
+	    shape_combine (e, MUL, f)));
+
+    ERRMEM (shape->extents = malloc (sizeof (REAL [6])));
+
+    VECTOR (shape->extents, p[0], p[1], p[2]);
+    VECTOR (shape->extents+3, p[0]+u, p[1]+v, p[2]+w);
+
+    out->ptr = shape;
   }
 
   return (PyObject*)out;
 }
 
+/* create solid */
+static PyObject* SOLID (PyObject *self, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("simu", "shape", "label");
+  struct shape *copy;
+  SIMULATION *simu;
+  PyObject *label;
+  SHAPE *shape;
+
+  PARSEKEYS ("OOO", &simu, &shape, &label);
+
+  TYPETEST (is_simulation (simu, kwl[0]) && is_shape (shape, kwl[1]) && is_string (label, kwl[2]));
+
+  copy = shape_copy (shape->ptr, PyString_AsString (label));
+
+  if (simu->ptr->solids)
+    simu->ptr->solids->prev = copy;
+  copy->next = simu->ptr->solids;
+  simu->ptr->solids = copy; /* insert copy into list of solids */
+
+  Py_RETURN_NONE;
+}
+
 static PyMethodDef methods [] =
 {
   {"CUBE", (PyCFunction)CUBE, METH_VARARGS|METH_KEYWORDS, "Create cube"},
+  {"SOLID", (PyCFunction)SOLID, METH_VARARGS|METH_KEYWORDS, "Create solid"},
   {NULL, 0, 0, NULL}
 };
 
@@ -178,17 +399,21 @@ static void initinput (void)
 {
   PyObject *m;
 
+  if (!(m =  Py_InitModule3 ("oaktree", methods, "oaktree module"))) return;
+
   TYPEINIT (SHAPE_TYPE, SHAPE, "solfec.SHAPE",
     Py_TPFLAGS_DEFAULT, SHAPE_dealloc, SHAPE_new,
     SHAPE_methods, SHAPE_members, SHAPE_getset);
-
   if (PyType_Ready (&SHAPE_TYPE) < 0) return;
-
-  if (!(m =  Py_InitModule3 ("oaktree", methods, "oaktree module"))) return;
-
   Py_INCREF (&SHAPE_TYPE);
-
   PyModule_AddObject (m, "SHAPE", (PyObject*)&SHAPE_TYPE);
+
+  TYPEINIT (SIMULATION_TYPE, SIMULATION, "solfec.SIMULATION",
+    Py_TPFLAGS_DEFAULT, SIMULATION_dealloc, SIMULATION_new,
+    SIMULATION_methods, SIMULATION_members, SIMULATION_getset);
+  if (PyType_Ready (&SIMULATION_TYPE) < 0) return;
+  Py_INCREF (&SIMULATION_TYPE);
+  PyModule_AddObject (m, "SIMULATION", (PyObject*)&SIMULATION_TYPE);
 }
 
 /* 
@@ -208,8 +433,10 @@ int input (const char *path)
 
   initinput ();
 
-  PyRun_SimpleString("from oaktree import SHAPE\n"
-                     "from oaktree import CUBE\n");
+  PyRun_SimpleString("from oaktree import SIMULATION\n"
+                     "from oaktree import SHAPE\n"
+                     "from oaktree import CUBE\n"
+                     "from oaktree import SOLID\n");
 
   ERRMEM (line = malloc (128 + strlen (path)));
   sprintf (line, "execfile ('%s')", path);

@@ -10,23 +10,33 @@ struct halfplane
 {
   REAL p [3], n [3];
 
-  short scolor;
+  short vcolor, scolor;
 };
+
+#if 0
+struct  warp /* deformation as a space warp */
+{
+};
+#endif
 
 struct shape
 {
-  REAL extents [6];
+  REAL *extents;
 
   enum {ADD, MUL, SUB, HPL} what;
 
-  void *data;
-
-  short vcolor;
+  void *data; /* solid label or leaf data */
 
   struct shape *left, *right;
 
-  struct shape *next;
+  struct shape *prev, *next;
 };
+
+/* copy and label shape */
+struct shape* shape_copy (struct shape *shape, char *label);
+
+/* combine two shapes */
+struct shape* shape_combine (struct shape *left, short what, struct shape *right);
 
 /* return distance to shape at given point */
 REAL shape_evaluate (struct shape *shape, REAL *point);
@@ -34,8 +44,6 @@ REAL shape_evaluate (struct shape *shape, REAL *point);
 struct octcut
 {
   REAL d [8];
-
-  short color;
 
   struct shape *shape;
 
@@ -70,7 +78,14 @@ struct simulation
 
   REAL extents [6];
 
-  struct shape *shape;
+  struct shape *solids;
+
+  struct octree *octree;
+
+  struct simulation *prev, *next;
 };
+
+/* global simulations list */
+extern struct simulation *simulation;
 
 #endif
