@@ -13,6 +13,13 @@ struct halfplane
   short vcolor, scolor;
 };
 
+struct sphere
+{
+  REAL c [3], r;
+
+  short vcolor, scolor;
+};
+
 #if 0
 struct  warp /* deformation as a space warp */
 {
@@ -23,9 +30,11 @@ struct shape
 {
   REAL *extents;
 
-  enum {ADD, MUL, SUB, HPL} what;
+  enum {ADD, MUL, SUB, HPL, SPH} what;
 
-  void *data; /* solid label or leaf data */
+  void *data;
+
+  char *label;
 
   struct shape *left, *right;
 
@@ -40,6 +49,12 @@ struct shape* shape_combine (struct shape *left, short what, struct shape *right
 
 /* return distance to shape at given point */
 REAL shape_evaluate (struct shape *shape, REAL *point);
+
+/* rotate shape about a point using a rotation matrix */
+void shape_rotate (struct shape *shape, REAL *point, REAL *matrix);
+
+/* free shape memory */
+void shape_destroy (struct shape *shape);
 
 struct octcut
 {

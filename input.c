@@ -162,7 +162,7 @@ static PyObject* SIMULATION_new (PyTypeObject *type, PyObject *args, PyObject *k
 	      is_positive (cutoff, kwl[4]) && is_tuple (extents, kwl[5], 6));
 
     ERRMEM (simu = calloc (1, sizeof (struct simulation)));
-    ERRMEM (simu->outpath = malloc (sizeof (char [strlen (PyString_AsString (outpath))])));
+    ERRMEM (simu->outpath = malloc (strlen (PyString_AsString (outpath)) + 1));
     strcpy (simu->outpath, PyString_AsString (outpath));
     simu->duration = duration;
     simu->step = step;
@@ -241,6 +241,8 @@ static PyObject* SHAPE_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
 /* destructor */
 static void SHAPE_dealloc (SHAPE *self)
 {
+  shape_destroy (self->ptr);
+
   self->ob_type->tp_free ((PyObject*)self);
 }
 
@@ -259,6 +261,47 @@ static PyGetSetDef SHAPE_getset [] =
 /*
  * SUBROUTINES
  */
+
+/* create sphere */
+static PyObject* SPHERE (PyObject *self, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("center", "r", "vcolor", "scolor");
+  struct sphere *sphere;
+  int vcolor, scolor;
+  PyObject *center;
+  double r;
+  SHAPE *out;
+
+  out = (SHAPE*)SHAPE_TYPE.tp_alloc (&SHAPE_TYPE, 0);
+
+  if (out)
+  {
+    PARSEKEYS ("Odii", &center, &r, &vcolor, &scolor);
+
+    TYPETEST (is_tuple (center, kwl[0], 3) && is_positive (r, kwl[1]));
+
+    ERRMEM (out->ptr = calloc (1, sizeof (struct shape)));
+    ERRMEM (out->ptr->extents = malloc (sizeof (REAL [6])));
+    ERRMEM (sphere = malloc (sizeof (struct sphere)));
+
+    sphere->c [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 0));
+    sphere->c [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 1));
+    sphere->c [2] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 2));
+    sphere->r = r;
+    sphere->vcolor = vcolor;
+    sphere->scolor = scolor;
+
+    REAL *e = out->ptr->extents;
+
+    VECTOR (e, sphere->c[0]-r, sphere->c[1]-r, sphere->c[2]-r);
+    VECTOR (e+3, sphere->c[0]+r, sphere->c[1]+r, sphere->c[2]+r);
+
+    out->ptr->what = SPH;
+    out->ptr->data = sphere;
+  }
+
+  return (PyObject*)out;
+}
 
 /* create cube */
 static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
@@ -346,9 +389,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     f->what = HPL;
     f->data = h;
 
-    shape = shape_combine (shape_combine (a, MUL, b), MUL,
-	    shape_combine (shape_combine (c, MUL, d), MUL,
-	    shape_combine (e, MUL, f)));
+    shape = shape_combine (shape_combine (shape_combine (a, MUL, d), MUL, shape_combine (b, MUL, e)), MUL, shape_combine (c, MUL, f));
 
     ERRMEM (shape->extents = malloc (sizeof (REAL [6])));
 
@@ -359,6 +400,124 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
   }
 
   return (PyObject*)out;
+}
+
+/* union of shapes */
+static PyObject* UNION (PyObject *self, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("shape1", "shape2");
+  SHAPE *shape1, *shape2, *out;
+
+  out = (SHAPE*)SHAPE_TYPE.tp_alloc (&SHAPE_TYPE, 0);
+
+  if (out)
+  {
+    PARSEKEYS ("OO", &shape1, &shape2);
+
+    TYPETEST (is_shape (shape1, kwl[0]) && is_shape (shape2, kwl[1]));
+
+    out->ptr = shape_combine (shape_copy (shape1->ptr, NULL), ADD, shape_copy (shape2->ptr, NULL));
+
+    ERRMEM (out->ptr->extents = malloc (sizeof (REAL [6])));
+
+    REAL *e1 = shape1->ptr->extents,
+	 *e2 = shape2->ptr->extents,
+	 *e3 = out->ptr->extents;
+
+    VECTOR (e3, MIN (e1[0],e2[0]), MIN (e1[1],e2[1]), MIN (e1[2],e2[2]));
+    VECTOR (e3+3, MAX (e1[3],e2[3]), MAX (e1[4],e2[4]), MAX (e1[5],e2[5]));
+  }
+
+  return (PyObject*)out;
+}
+
+/* intersection of shapes */
+static PyObject* INTERSECTION (PyObject *self, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("shape1", "shape2");
+  SHAPE *shape1, *shape2, *out;
+
+  out = (SHAPE*)SHAPE_TYPE.tp_alloc (&SHAPE_TYPE, 0);
+
+  if (out)
+  {
+    PARSEKEYS ("OO", &shape1, &shape2);
+
+    TYPETEST (is_shape (shape1, kwl[0]) && is_shape (shape2, kwl[1]));
+
+    out->ptr = shape_combine (shape_copy (shape1->ptr, NULL), MUL, shape_copy (shape2->ptr, NULL));
+
+    ERRMEM (out->ptr->extents = malloc (sizeof (REAL [6])));
+
+    REAL *e1 = shape1->ptr->extents,
+	 *e2 = shape2->ptr->extents,
+	 *e3 = out->ptr->extents;
+
+    VECTOR (e3, MIN (e1[0],e2[0]), MIN (e1[1],e2[1]), MIN (e1[2],e2[2]));
+    VECTOR (e3+3, MAX (e1[3],e2[3]), MAX (e1[4],e2[4]), MAX (e1[5],e2[5]));
+  }
+
+  return (PyObject*)out;
+}
+
+/* difference of shapes */
+static PyObject* DIFFERENCE (PyObject *self, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("shape1", "shape2");
+  SHAPE *shape1, *shape2, *out;
+
+  out = (SHAPE*)SHAPE_TYPE.tp_alloc (&SHAPE_TYPE, 0);
+
+  if (out)
+  {
+    PARSEKEYS ("OO", &shape1, &shape2);
+
+    TYPETEST (is_shape (shape1, kwl[0]) && is_shape (shape2, kwl[1]));
+
+    out->ptr = shape_combine (shape_copy (shape1->ptr, NULL), SUB, shape_copy (shape2->ptr, NULL));
+
+    ERRMEM (out->ptr->extents = malloc (sizeof (REAL [6])));
+
+    COPY6 (shape1->ptr->extents, out->ptr->extents);
+  }
+
+  return (PyObject*)out;
+}
+
+/* rotate shape */
+static PyObject* ROTATE (PyObject *self, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("shape", "point", "vector", "angle");
+  REAL r [9], p [3], v [3];
+  PyObject *point, *vector;
+  double angle;
+  SHAPE *shape;
+
+  PARSEKEYS ("OOOd", &shape, &point, &vector, &angle);
+
+  TYPETEST (is_shape (shape, kwl[0]) && is_tuple (point, kwl[1], 3) && is_tuple (vector, kwl[2], 3));
+
+  p [0] = PyFloat_AsDouble (PyTuple_GetItem (point, 0));
+  p [1] = PyFloat_AsDouble (PyTuple_GetItem (point, 1));
+  p [2] = PyFloat_AsDouble (PyTuple_GetItem (point, 2));
+
+  v [0] = PyFloat_AsDouble (PyTuple_GetItem (vector, 0));
+  v [1] = PyFloat_AsDouble (PyTuple_GetItem (vector, 1));
+  v [2] = PyFloat_AsDouble (PyTuple_GetItem (vector, 2));
+
+  if (LEN (v) == 0)
+  {
+    PyErr_SetString (PyExc_ValueError, "Rotation direction is zero");
+    return NULL;
+  }
+
+  angle = (ALG_PI * angle / 180.0);
+
+  ROTATION_MATRIX (v, angle, r);
+
+  shape_rotate (shape->ptr, p, r);
+
+  Py_RETURN_NONE;
 }
 
 /* create solid */
@@ -386,7 +545,12 @@ static PyObject* SOLID (PyObject *self, PyObject *args, PyObject *kwds)
 
 static PyMethodDef methods [] =
 {
+  {"SPHERE", (PyCFunction)SPHERE, METH_VARARGS|METH_KEYWORDS, "Create sphere"},
   {"CUBE", (PyCFunction)CUBE, METH_VARARGS|METH_KEYWORDS, "Create cube"},
+  {"UNION", (PyCFunction)UNION, METH_VARARGS|METH_KEYWORDS, "Union of shapes"},
+  {"INTERSECTION", (PyCFunction)INTERSECTION, METH_VARARGS|METH_KEYWORDS, "Intersection of shapes"},
+  {"DIFFERENCE", (PyCFunction)DIFFERENCE, METH_VARARGS|METH_KEYWORDS, "Difference of shapes"},
+  {"ROTATE", (PyCFunction)ROTATE, METH_VARARGS|METH_KEYWORDS, "Rotate shape"},
   {"SOLID", (PyCFunction)SOLID, METH_VARARGS|METH_KEYWORDS, "Create solid"},
   {NULL, 0, 0, NULL}
 };
@@ -435,7 +599,12 @@ int input (const char *path)
 
   PyRun_SimpleString("from oaktree import SIMULATION\n"
                      "from oaktree import SHAPE\n"
+                     "from oaktree import SPHERE\n"
                      "from oaktree import CUBE\n"
+                     "from oaktree import UNION\n"
+                     "from oaktree import INTERSECTION\n"
+                     "from oaktree import DIFFERENCE\n"
+                     "from oaktree import ROTATE\n"
                      "from oaktree import SOLID\n");
 
   ERRMEM (line = malloc (128 + strlen (path)));

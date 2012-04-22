@@ -332,8 +332,7 @@ restitution
 \end_inset
 
 
-\begin_inset Note Note
-status open
+\end_layout
 
 \begin_layout Section
 \begin_inset CommandInset label
@@ -345,7 +344,7 @@ name "sub:SPHERE"
 SPHERE
 \end_layout
 
-\begin_layout Plain Layout
+\begin_layout Standard
 A sphere shape.
 \end_layout
 
@@ -401,9 +400,7 @@ scolor
  - integer surface color
 \end_layout
 
-\end_inset
-
-
+\begin_layout Standard
 \begin_inset Note Note
 status open
 

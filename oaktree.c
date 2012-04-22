@@ -36,6 +36,8 @@ static void init ()
     simulation->octree = octree_create (simulation->extents, simulation->grid);
 
     octree_insert_shapes (simulation->octree, simulation->solids, simulation->cutoff);
+
+    viewer_update_extents (simulation->extents);
   }
 }
 
@@ -55,8 +57,8 @@ static void render ()
 {
   if (simulation)
   {
-    render_octree (simulation->octree);
-    
+    //render_octree (simulation->octree);
+   
     render_shapes (simulation->octree, simulation->cutoff);
   }
 }
@@ -86,6 +88,17 @@ static void passive (int x, int y)
 {
 }
 #endif
+
+/* run analysis */
+static void runanalysis ()
+{
+  if (simulation)
+  {
+    simulation->octree = octree_create (simulation->extents, simulation->grid);
+
+    octree_insert_shapes (simulation->octree, simulation->solids, simulation->cutoff);
+  }
+}
 
 /* return input file path and parse arguments */
 static char* getfile (int argc, char **argv)
@@ -139,7 +152,11 @@ int main (int argc, char **argv)
       viewer (&argc, argv, "oeaktree", width, height, extents, menu,
 	init, idle, quit, render, key, keyspec, mouse, motion, passive);
     }
+    else
 #endif
+    {
+      runanalysis ();
+    }
 
   return 0;
 }

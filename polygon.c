@@ -12,14 +12,12 @@
  * an edge between two vertices, each with their own scalar value */
 static void vertexinterp (REAL isolevel, REAL cutoff, REAL p1 [3], REAL p2 [3], REAL valp1, REAL valp2, REAL *out)
 {
-  REAL mu;
-
-  if (ABS(isolevel-valp1) < cutoff) { COPY (p1, out); }
-  if (ABS(isolevel-valp2) < cutoff) { COPY (p2, out); }
-  if (ABS(valp1-valp2) < cutoff) { COPY (p1, out); }
+  if (fabs (isolevel-valp1) < cutoff) { COPY (p1, out); }
+  else if (fabs (isolevel-valp2) < cutoff) { COPY (p2, out); }
+  else if (fabs (valp1-valp2) < cutoff) { COPY (p1, out); }
   else
   {
-    mu = (isolevel - valp1) / (valp2 - valp1);
+    REAL mu = (isolevel - valp1) / (valp2 - valp1);
     out [0] = p1 [0] + mu * (p2 [0] - p1 [0]);
     out [1] = p1 [1] + mu * (p2 [1] - p1 [1]);
     out [2] = p1 [2] + mu * (p2 [2] - p1 [2]);
@@ -360,9 +358,9 @@ int polygonise (REAL p [8][3], REAL val [8], REAL isolevel, REAL cutoff, REAL tr
 
   /* Create the triangle */
   ntriang = 0;
-  for (i=0; triTable [cubeindex][i]!=-1; i+=3)
+  for (i = 0; triTable [cubeindex][i] != -1; i += 3)
   {
-    COPY (vertlist[triTable [cubeindex][i]], triangles[ntriang][0]);
+    COPY (vertlist[triTable[cubeindex][i  ]], triangles[ntriang][0]);
     COPY (vertlist[triTable[cubeindex][i+1]], triangles[ntriang][1]);
     COPY (vertlist[triTable[cubeindex][i+2]], triangles[ntriang][2]);
     ntriang++;

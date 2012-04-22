@@ -10,13 +10,47 @@
 #include "error.h"
 #include "alg.h"
 
-#if 0
+/* linear shape functions for hexahedron */
+#define HEX0(x,y,z) (0.125*(1.0-(x))*(1.0-(y))*(1.0-(z)))
+#define HEX1(x,y,z) (0.125*(1.0+(x))*(1.0-(y))*(1.0-(z)))
+#define HEX2(x,y,z) (0.125*(1.0+(x))*(1.0+(y))*(1.0-(z)))
+#define HEX3(x,y,z) (0.125*(1.0-(x))*(1.0+(y))*(1.0-(z)))
+#define HEX4(x,y,z) (0.125*(1.0-(x))*(1.0-(y))*(1.0+(z)))
+#define HEX5(x,y,z) (0.125*(1.0+(x))*(1.0-(y))*(1.0+(z)))
+#define HEX6(x,y,z) (0.125*(1.0+(x))*(1.0+(y))*(1.0+(z)))
+#define HEX7(x,y,z) (0.125*(1.0-(x))*(1.0+(y))*(1.0+(z)))
+
 /* accuracy test */
-static int accurate (REAL p[8][3], REAL d[8], struct shape *shape, REAL cutoff)
+static int accurate (REAL p [8][3], REAL d [8], struct shape *shape, REAL cutoff)
 {
+  REAL l [][3] = {{-0.5, -0.5, -0.5}, {0.5, -0.5, -0.5}, {0.5, 0.5, -0.5}, {-0.5, 0.5, -0.5},
+                  {-0.5, -0.5, 0.5}, {0.5, -0.5, 0.5}, {0.5, 0.5, 0.5}, {-0.5, 0.5, 0.5}, {0, 0, 0}};
+  REAL q [3], u, v, w;
+  int i;
+
+#define point(l0, l1, l2, i) (p[0][i]*HEX0(l0, l1, l2) + p[1][i]*HEX1(l0, l1, l2) +\
+                              p[2][i]*HEX2(l0, l1, l2) + p[3][i]*HEX3(l0, l1, l2) +\
+		              p[4][i]*HEX4(l0, l1, l2) + p[5][i]*HEX5(l0, l1, l2) +\
+		              p[6][i]*HEX6(l0, l1, l2) + p[7][i]*HEX7(l0, l1, l2))
+
+#define interpolate(l0, l1, l2) (d[0]*HEX0(l0, l1, l2) + d[1]*HEX1(l0, l1, l2) +\
+                                 d[2]*HEX2(l0, l1, l2) + d[3]*HEX3(l0, l1, l2) +\
+				 d[4]*HEX4(l0, l1, l2) + d[5]*HEX5(l0, l1, l2) +\
+				 d[6]*HEX6(l0, l1, l2) + d[7]*HEX7(l0, l1, l2))
+
+  for (i = 0; i < 9; i ++)
+  {
+    q [0] = point (l[i][0], l[i][1], l[i][2], 0);
+    q [1] = point (l[i][0], l[i][1], l[i][2], 1);
+    q [2] = point (l[i][0], l[i][1], l[i][2], 2);
+    u = interpolate (l[i][0], l[i][1], l[i][2]);
+    v = shape_evaluate (shape, q);
+    w = u - v;
+    if (fabs (w) > cutoff) return 0;
+  }
+
   return 1;
 }
-#endif
 
 /* recursive insert */
 static void recursive_insert (struct octree *oct, struct shape *shape, REAL cutoff)
@@ -34,29 +68,31 @@ static void recursive_insert (struct octree *oct, struct shape *shape, REAL cuto
       f [5] < e [2] || f [2] > e [5]) return;
 
   VECTOR (p[0], e[0], e[1], e[2]);
-  VECTOR (p[1], e[3], e[1], e[2]);
+  VECTOR (p[1], e[0], e[4], e[2]);
   VECTOR (p[2], e[3], e[4], e[2]);
-  VECTOR (p[3], e[0], e[4], e[2]);
+  VECTOR (p[3], e[3], e[1], e[2]);
   VECTOR (p[4], e[0], e[1], e[5]);
-  VECTOR (p[5], e[3], e[1], e[5]);
+  VECTOR (p[5], e[0], e[4], e[5]);
   VECTOR (p[6], e[3], e[4], e[5]);
-  VECTOR (p[7], e[0], e[4], e[5]);
+  VECTOR (p[7], e[3], e[1], e[5]);
 
   for (i = 0; i < 8; i ++) d [i] = shape_evaluate (shape, p[i]);
 
-#if 0
   if (accurate (p, d, shape, cutoff))
-#else
-  if (!oct->down [0])
-#endif
   {
-    ERRMEM (cut = malloc (sizeof (struct octcut)));
+    for (i = 1; i < 8; i ++)
+      if (d [0] * d [i] <= 0.0) break;
 
-    for (i = 0; i < 8; i ++) cut->d [i] = d[i];
+    if (i < 8)
+    {
+      ERRMEM (cut = malloc (sizeof (struct octcut)));
 
-    cut->shape = shape;
-    cut->next = oct->cut;
-    oct->cut = cut;
+      for (i = 0; i < 8; i ++) cut->d [i] = d[i];
+
+      cut->shape = shape;
+      cut->next = oct->cut;
+      oct->cut = cut;
+    }
   }
   else
   {
