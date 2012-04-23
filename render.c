@@ -10,7 +10,6 @@
   #include <GL/glut.h>
   #include <GL/glext.h>
 #endif
-#include "polygon.h"
 #include "render.h"
 #include "error.h"
 #include "alg.h"
@@ -79,35 +78,24 @@ void render_octree (struct octree *oct)
 /* render shapes */
 void render_shapes (struct octree *oct, REAL cutoff)
 {
-  REAL p [8][3], t [5][3][3], *e = oct->extents;
-  struct octcut *cut;
-  int i, j;
+  struct triang *triang;
+  int i;
 
   if (oct->down [0])
   {
     for (i = 0; i < 8; i ++) render_shapes (oct->down [i], cutoff);
   }
 
-  VECTOR (p[0], e[0], e[1], e[2]);
-  VECTOR (p[1], e[0], e[4], e[2]);
-  VECTOR (p[2], e[3], e[4], e[2]);
-  VECTOR (p[3], e[3], e[1], e[2]);
-  VECTOR (p[4], e[0], e[1], e[5]);
-  VECTOR (p[5], e[0], e[4], e[5]);
-  VECTOR (p[6], e[3], e[4], e[5]);
-  VECTOR (p[7], e[3], e[1], e[5]);
-
   glBegin (GL_TRIANGLES);
 
   glColor3f (0.5, 0.5, 0.5);
 
-  for (cut = oct->cut; cut; cut = cut->next)
+  for (triang = oct->triang; triang; triang = triang->next)
   {
-    j = polygonise (p, cut->d, 0.0, 0.01*cutoff, t);
+    REAL (*t) [3][3] = triang->t, n [3];
 
-    for (i = 0; i < j; i ++)
+    for (i = 0; i < triang->n; i ++)
     {
-      REAL n [3];
       NORMAL (t[i][0], t[i][1], t[i][2], n); /* FIXME: let OpenGL do this */
       glNormal3f (n[0], n[1], n[2]);
       glVertex3f (t[i][0][0], t[i][0][1], t[i][0][2]);

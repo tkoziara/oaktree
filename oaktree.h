@@ -8,6 +8,8 @@
 
 struct halfplane
 {
+  REAL oobb [8][3];
+
   REAL p [3], n [3];
 
   short vcolor, scolor;
@@ -15,6 +17,8 @@ struct halfplane
 
 struct sphere
 {
+  REAL oobb [8][3];
+
   REAL c [3], r;
 
   short vcolor, scolor;
@@ -28,8 +32,6 @@ struct  warp /* deformation as a space warp */
 
 struct shape
 {
-  REAL *extents;
-
   enum {ADD, MUL, SUB, HPL, SPH} what;
 
   void *data;
@@ -47,29 +49,37 @@ struct shape* shape_copy (struct shape *shape, char *label);
 /* combine two shapes */
 struct shape* shape_combine (struct shape *left, short what, struct shape *right);
 
-/* return distance to shape at given point */
-REAL shape_evaluate (struct shape *shape, REAL *point);
+/* count shape leaves */
+int shape_leaves_count (struct shape *shape);
+
+/* return shape leaves */
+void shape_leaves (struct shape *shape, struct shape **leaves);
 
 /* rotate shape about a point using a rotation matrix */
 void shape_rotate (struct shape *shape, REAL *point, REAL *matrix);
 
+/* return distance to shape at given point */
+REAL shape_evaluate (struct shape *shape, REAL *point);
+
 /* free shape memory */
 void shape_destroy (struct shape *shape);
 
-struct octcut
+struct triang
 {
-  REAL d [8];
+  REAL (*t) [3][3];
+
+  short n;
 
   struct shape *shape;
 
-  struct octcut *next;
+  struct triang *next;
 };
 
 struct octree
 {
   REAL extents [6];
 
-  struct octcut *cut;
+  struct triang *triang;
 
   struct octree *up, *down [8];
 };
@@ -77,8 +87,8 @@ struct octree
 /* create octree down to a cutoff edge length */
 struct octree* octree_create (REAL extents [6], REAL cutoff);
 
-/* insert list of shape and refine octree down to a cutoff edge length */
-void octree_insert_shapes (struct octree *oct, struct shape *list, REAL cutoff);
+/* insert shape and refine octree down to a cutoff edge length */
+void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff);
 
 /* free octree memory */
 void octree_destroy (struct octree *oct);

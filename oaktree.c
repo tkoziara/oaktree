@@ -35,7 +35,8 @@ static void init ()
   {
     simulation->octree = octree_create (simulation->extents, simulation->grid);
 
-    octree_insert_shapes (simulation->octree, simulation->solids, simulation->cutoff);
+    for (struct shape *shape = simulation->solids; shape; shape = shape->next)
+      octree_insert_shape (simulation->octree, shape, simulation->cutoff);
 
     viewer_update_extents (simulation->extents);
   }
@@ -96,7 +97,8 @@ static void runanalysis ()
   {
     simulation->octree = octree_create (simulation->extents, simulation->grid);
 
-    octree_insert_shapes (simulation->octree, simulation->solids, simulation->cutoff);
+    for (struct shape *shape = simulation->solids; shape; shape = shape->next)
+      octree_insert_shape (simulation->octree, shape, simulation->cutoff);
   }
 }
 

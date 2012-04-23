@@ -41,6 +41,19 @@ memset (&(typedesc), 0, sizeof (PyTypeObject));\
  * utilities
  */
 
+/* set up oobb */
+static void oobbsetup (REAL p [3], REAL u, REAL v, REAL w, REAL oobb [6][3])
+{
+  VECTOR (oobb[0], p[0]-u, p[1]-v, p[2]-w);
+  VECTOR (oobb[1], p[0]-u, p[1]+v, p[2]-w);
+  VECTOR (oobb[2], p[0]+u, p[1]+v, p[2]-w);
+  VECTOR (oobb[3], p[0]+u, p[1]-v, p[2]-w);
+  VECTOR (oobb[4], p[0]-u, p[1]-v, p[2]+w);
+  VECTOR (oobb[5], p[0]-u, p[1]+v, p[2]+w);
+  VECTOR (oobb[6], p[0]+u, p[1]+v, p[2]+w);
+  VECTOR (oobb[7], p[0]+u, p[1]-v, p[2]+w);
+}
+
 /* string test */
 static int is_string (PyObject *obj, char *var)
 {
@@ -281,7 +294,6 @@ static PyObject* SPHERE (PyObject *self, PyObject *args, PyObject *kwds)
     TYPETEST (is_tuple (center, kwl[0], 3) && is_positive (r, kwl[1]));
 
     ERRMEM (out->ptr = calloc (1, sizeof (struct shape)));
-    ERRMEM (out->ptr->extents = malloc (sizeof (REAL [6])));
     ERRMEM (sphere = malloc (sizeof (struct sphere)));
 
     sphere->c [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 0));
@@ -290,11 +302,7 @@ static PyObject* SPHERE (PyObject *self, PyObject *args, PyObject *kwds)
     sphere->r = r;
     sphere->vcolor = vcolor;
     sphere->scolor = scolor;
-
-    REAL *e = out->ptr->extents;
-
-    VECTOR (e, sphere->c[0]-r, sphere->c[1]-r, sphere->c[2]-r);
-    VECTOR (e+3, sphere->c[0]+r, sphere->c[1]+r, sphere->c[2]+r);
+    oobbsetup (sphere->c, r, r, r, sphere->oobb);
 
     out->ptr->what = SPH;
     out->ptr->data = sphere;
@@ -312,6 +320,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
   struct halfplane *h;
   double u, v, w;
   double p [3];
+  REAL q [3];
   int vcolor;
   SHAPE *out;
 
@@ -338,6 +347,8 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
     a->what = HPL;
     a->data = h;
+    VECTOR (q, p[0], p[1]+0.5*v, p[2]+0.5*w);
+    oobbsetup (q, 0.05*u, 0.5*v, 0.5*w, h->oobb);
 
    /* 0, -1, 0 */
     ERRMEM (b = calloc (1, sizeof (struct shape)));
@@ -348,6 +359,8 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
     b->what = HPL;
     b->data = h;
+    VECTOR (q, p[0]+0.5*u, p[1], p[2]+0.5*w);
+    oobbsetup (q, 0.5*u, 0.05*v, 0.5*w, h->oobb);
 
     /* 0, 0, -1 */
     ERRMEM (c = calloc (1, sizeof (struct shape)));
@@ -358,6 +371,8 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
     c->what = HPL;
     c->data = h;
+    VECTOR (q, p[0]+0.5*u, p[1]+0.5*v, p[2]);
+    oobbsetup (q, 0.5*u, 0.5*v, 0.05*w, h->oobb);
 
     /* 1, 0, 0 */
     ERRMEM (d = calloc (1, sizeof (struct shape)));
@@ -368,6 +383,8 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 3));
     d->what = HPL;
     d->data = h;
+    VECTOR (q, p[0]+u, p[1]+0.5*v, p[2]+0.5*w);
+    oobbsetup (q, 0.05*u, 0.5*v, 0.5*w, h->oobb);
 
    /* 0, 1, 0 */
     ERRMEM (e = calloc (1, sizeof (struct shape)));
@@ -378,6 +395,8 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 4));
     e->what = HPL;
     e->data = h;
+    VECTOR (q, p[0]+0.5*u, p[1]+v, p[2]+0.5*w);
+    oobbsetup (q, 0.5*u, 0.05*v, 0.5*w, h->oobb);
 
     /* 0, 0, 1 */
     ERRMEM (f = calloc (1, sizeof (struct shape)));
@@ -388,13 +407,10 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 5));
     f->what = HPL;
     f->data = h;
+    VECTOR (q, p[0]+0.5*u, p[1]+0.5*v, p[2]+w);
+    oobbsetup (q, 0.5*u, 0.5*v, 0.05*w, h->oobb);
 
     shape = shape_combine (shape_combine (shape_combine (a, MUL, d), MUL, shape_combine (b, MUL, e)), MUL, shape_combine (c, MUL, f));
-
-    ERRMEM (shape->extents = malloc (sizeof (REAL [6])));
-
-    VECTOR (shape->extents, p[0], p[1], p[2]);
-    VECTOR (shape->extents+3, p[0]+u, p[1]+v, p[2]+w);
 
     out->ptr = shape;
   }
@@ -417,15 +433,6 @@ static PyObject* UNION (PyObject *self, PyObject *args, PyObject *kwds)
     TYPETEST (is_shape (shape1, kwl[0]) && is_shape (shape2, kwl[1]));
 
     out->ptr = shape_combine (shape_copy (shape1->ptr, NULL), ADD, shape_copy (shape2->ptr, NULL));
-
-    ERRMEM (out->ptr->extents = malloc (sizeof (REAL [6])));
-
-    REAL *e1 = shape1->ptr->extents,
-	 *e2 = shape2->ptr->extents,
-	 *e3 = out->ptr->extents;
-
-    VECTOR (e3, MIN (e1[0],e2[0]), MIN (e1[1],e2[1]), MIN (e1[2],e2[2]));
-    VECTOR (e3+3, MAX (e1[3],e2[3]), MAX (e1[4],e2[4]), MAX (e1[5],e2[5]));
   }
 
   return (PyObject*)out;
@@ -446,15 +453,6 @@ static PyObject* INTERSECTION (PyObject *self, PyObject *args, PyObject *kwds)
     TYPETEST (is_shape (shape1, kwl[0]) && is_shape (shape2, kwl[1]));
 
     out->ptr = shape_combine (shape_copy (shape1->ptr, NULL), MUL, shape_copy (shape2->ptr, NULL));
-
-    ERRMEM (out->ptr->extents = malloc (sizeof (REAL [6])));
-
-    REAL *e1 = shape1->ptr->extents,
-	 *e2 = shape2->ptr->extents,
-	 *e3 = out->ptr->extents;
-
-    VECTOR (e3, MIN (e1[0],e2[0]), MIN (e1[1],e2[1]), MIN (e1[2],e2[2]));
-    VECTOR (e3+3, MAX (e1[3],e2[3]), MAX (e1[4],e2[4]), MAX (e1[5],e2[5]));
   }
 
   return (PyObject*)out;
@@ -475,10 +473,6 @@ static PyObject* DIFFERENCE (PyObject *self, PyObject *args, PyObject *kwds)
     TYPETEST (is_shape (shape1, kwl[0]) && is_shape (shape2, kwl[1]));
 
     out->ptr = shape_combine (shape_copy (shape1->ptr, NULL), SUB, shape_copy (shape2->ptr, NULL));
-
-    ERRMEM (out->ptr->extents = malloc (sizeof (REAL [6])));
-
-    COPY6 (shape1->ptr->extents, out->ptr->extents);
   }
 
   return (PyObject*)out;
