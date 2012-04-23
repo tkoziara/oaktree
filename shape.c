@@ -219,6 +219,66 @@ REAL shape_evaluate (struct shape *shape, REAL *point)
   return v;
 }
 
+/* return value and compute shape normal at given point */
+REAL shape_normal (struct shape *shape, REAL *point, REAL *normal)
+{
+  REAL l [3], r [3], z [3], a, b, sq, v;
+  struct halfplane *halfplane;
+  struct sphere *sphere;
+
+  switch (shape->what)
+  {
+  case ADD:
+    a = shape_normal (shape->left, point, l);
+    b = shape_normal (shape->right, point, r);
+    v = MIN (a, b);
+    sq = sqrt (a*a + b*b);
+    a = (1.0 - a / sq);
+    b = (1.0 - b / sq);
+    normal [0] = a*l[0] + b*r[0];
+    normal [1] = a*l[1] + b*r[1];
+    normal [2] = a*l[2] + b*r[2];
+    break;
+  case MUL:
+    a = shape_normal (shape->left, point, l);
+    b = shape_normal (shape->right, point, r);
+    v = MAX (a, b);
+    sq = sqrt (a*a + b*b);
+    a = (1.0 + a / sq);
+    b = (1.0 + b / sq);
+    normal [0] = a*l[0] + b*r[0];
+    normal [1] = a*l[1] + b*r[1];
+    normal [2] = a*l[2] + b*r[2];
+    break;
+  case SUB:
+    a = shape_normal (shape->left, point, l);
+    b = -shape_normal (shape->right, point, r);
+    v = MAX (a, b);
+    sq = sqrt (a*a + b*b);
+    a = (1.0 + a / sq);
+    b = (1.0 + b / sq);
+    normal [0] = a*l[0] - b*r[0];
+    normal [1] = a*l[1] - b*r[1];
+    normal [2] = a*l[2] - b*r[2];
+    break;
+  case HPL:
+    halfplane = shape->data;
+    SUB (point, halfplane->p, z);
+    v = DOT (z, halfplane->n);
+    COPY (halfplane->n, normal);
+    break;
+  case SPH:
+    sphere = shape->data;
+    SUB (point, sphere->c, z);
+    sq = LEN (z);
+    v = sq - sphere->r;
+    DIV (z, sq, normal);
+    break;
+  }
+
+  return v;
+}
+
 /* free shape memory */
 void shape_destroy (struct shape *shape)
 {

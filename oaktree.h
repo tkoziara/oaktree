@@ -61,6 +61,9 @@ void shape_rotate (struct shape *shape, REAL *point, REAL *matrix);
 /* return distance to shape at given point */
 REAL shape_evaluate (struct shape *shape, REAL *point);
 
+/* return value and compute shape normal at given point */
+REAL shape_normal (struct shape *shape, REAL *point, REAL *normal);
+
 /* free shape memory */
 void shape_destroy (struct shape *shape);
 

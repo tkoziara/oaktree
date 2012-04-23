@@ -3,6 +3,7 @@
  * --------
  */
 
+#include <string.h>
 #include <stdlib.h>
 #include <float.h>
 #include <stdio.h>
@@ -52,6 +53,198 @@ static int accurate (REAL p [8][3], REAL d [8], struct shape *shape, REAL cutoff
   }
 
   return 1;
+}
+
+/* find zero point for u * v < 0 */
+inline static void zeropoint (REAL a [3], REAL b [3], REAL u, REAL v, REAL z [3])
+{
+  REAL ba [3], mu;
+
+  SUB (b, a, ba);
+  mu = -u / (v - u);
+  ADDMUL (a, mu, ba, z);
+}
+
+/* split triangle */
+static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k, struct shape *shape, REAL cutoff, REAL (**out) [3][3], int *m, int *size)
+{
+  REAL d [3], s [3][3][3];
+  int i, j;
+
+  if (k == 0)
+  {
+    if ((*m)+1 >= (*size))
+    {
+      (*size) *= 2;
+      ERRMEM ((*out) = realloc ((*out), (*size) * sizeof (REAL [3][3])));
+    }
+
+    MID3 (t[0], t[1], t[2], d);
+
+    short pass = 0;
+
+    REAL n0 [3], n1 [3], v0 = shape_normal (shape, d, n0);
+
+    if (src->what == HPL)
+    {
+      pass = (fabs (v0) <= 0.1*cutoff); /* mid-point and stringent tolerance for planar pieces */
+    }
+    else /* vertex points and relaxed tolerance for curved pieces */
+    {
+      REAL v[3] = {shape_evaluate (shape, t[0]),
+	           shape_evaluate (shape, t[1]),
+		   shape_evaluate (shape, t[2])};
+
+      cutoff *= 1.25; /* XXX */
+
+      pass = (fabs (v[0]) <= cutoff &&
+	      fabs (v[1]) <= cutoff &&
+	      fabs (v[2]) <= cutoff);
+    }
+
+    if (pass)
+    {
+      NORMAL (t[0], t[1], t[2], n1);
+
+      if (DOT (n0, n1) > 0.0)
+      {
+	COPY (t[0], (*out) [*m][0]);
+	COPY (t[1], (*out) [*m][1]);
+	COPY (t[2], (*out) [*m][2]);
+      }
+      else
+      {
+	COPY (t[2], (*out) [*m][0]);
+	COPY (t[1], (*out) [*m][1]);
+	COPY (t[0], (*out) [*m][2]);
+      }
+
+      (*m) ++;
+    }
+  }
+  else
+  {
+    d [0] = shape_evaluate (leaf[0], t[0]);
+    d [1] = shape_evaluate (leaf[0], t[1]);
+    d [2] = shape_evaluate (leaf[0], t[2]);
+
+    if (fabs (d[0]) < cutoff)
+    {
+      if (fabs (d[1]) < cutoff || fabs (d[2]) < cutoff || d[1]*d[2] > 0.0)
+      {
+	COPY (t[0], s[0][0]);
+	COPY (t[1], s[0][1]);
+	COPY (t[2], s[0][2]);
+	j = 1; goto done;
+      }
+      else
+      {
+	COPY (t[0], s[0][0]);
+	COPY (t[1], s[0][1]);
+	zeropoint (t[1], t[2], d[1], d[2], s[0][2]);
+	COPY (t[0], s[1][0]);
+	COPY (s[0][2], s[1][1]);
+	COPY (t[2], s[1][2]);
+	j = 2; goto done;
+      }
+    }
+
+    if (fabs (d[1]) < cutoff)
+    {
+      if (fabs (d[2]) < cutoff || d[0]*d[2] > 0.0)
+      {
+	COPY (t[0], s[0][0]);
+	COPY (t[1], s[0][1]);
+	COPY (t[2], s[0][2]);
+	j = 1; goto done;
+      }
+      else
+      {
+	COPY (t[0], s[0][0]);
+	COPY (t[1], s[0][1]);
+	zeropoint (t[2], t[0], d[2], d[0], s[0][2]);
+	COPY (s[0][2], s[1][0]);
+	COPY (t[1], s[1][1]);
+	COPY (t[2], s[1][2]);
+	j = 2; goto done;
+      }
+    }
+
+    if (fabs (d[2]) < cutoff)
+    {
+      if (d[0]*d[1] > 0.0)
+      {
+	COPY (t[0], s[0][0]);
+	COPY (t[1], s[0][1]);
+	COPY (t[2], s[0][2]);
+	j = 1; goto done;
+      }
+      else
+      {
+	COPY (t[0], s[0][0]);
+	zeropoint (t[0], t[1], d[0], d[1], s[0][1]);
+	COPY (t[2], s[0][2]);
+	COPY (s[0][1], s[1][0]);
+	COPY (t[1], s[1][1]);
+	COPY (t[2], s[1][2]);
+	j = 2; goto done;
+      }
+    }
+
+    if ((d[0] > 0.0 && d[1] > 0.0 && d[2] > 0.0) ||
+	(d[0] < 0.0 && d[1] < 0.0 && d[2] < 0.0))
+    {
+	COPY (t[0], s[0][0]);
+	COPY (t[1], s[0][1]);
+	COPY (t[2], s[0][2]);
+	j = 1; goto done;
+    }
+
+    if (d[1] * d[2] > 0.0)
+    {
+      COPY (t[0], s[0][0]);
+      zeropoint (t[0], t[1], d[0], d[1], s[0][1]);
+      zeropoint (t[2], t[0], d[2], d[0], s[0][2]);
+      COPY (s[0][2], s[1][0]);
+      COPY (s[0][1], s[1][1]);
+      COPY (t[1], s[1][2]);
+      COPY (s[0][2], s[2][0]);
+      COPY (t[1], s[2][1]);
+      COPY (t[2], s[2][2]);
+      j = 3; goto done;
+    }
+
+    if (d[0] * d[2] > 0.0)
+    {
+      COPY (t[1], s[0][0]);
+      zeropoint (t[1], t[2], d[1], d[2], s[0][1]);
+      zeropoint (t[0], t[1], d[0], d[1], s[0][2]);
+      COPY (s[0][2], s[1][0]);
+      COPY (s[0][1], s[1][1]);
+      COPY (t[2], s[1][2]);
+      COPY (s[0][2], s[2][0]);
+      COPY (t[2], s[2][1]);
+      COPY (t[0], s[2][2]);
+      j = 3; goto done;
+    }
+
+    if (d[0] * d[1] > 0.0)
+    {
+      COPY (t[2], s[0][0]);
+      zeropoint (t[2], t[0], d[2], d[0], s[0][1]);
+      zeropoint (t[1], t[2], d[1], d[2], s[0][2]);
+      COPY (s[0][2], s[1][0]);
+      COPY (s[0][1], s[1][1]);
+      COPY (t[0], s[1][2]);
+      COPY (s[0][2], s[2][0]);
+      COPY (t[0], s[2][1]);
+      COPY (t[1], s[2][2]);
+      j = 3; goto done;
+    }
+
+done:
+    for (i = 0; i < j; i ++) split (src, s [i], leaf+1, k-1, shape, cutoff, out, m, size);
+  }
 }
 
 /* create octree down to a cutoff edge length */
@@ -117,13 +310,13 @@ struct octree* octree_create (REAL extents [6], REAL cutoff)
 /* insert shape and refine octree down to a cutoff edge length */
 void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
 {
+  REAL t [5][3][3], p [8][3], (*d) [8], (*s) [3][3];
   REAL *x = oct->extents, e [6], y [3], z [3];
-  REAL t [5][3][3], p [8][3], (*d) [8];
+  int i, j, k, l, n, m, o, size;
   struct triang *triang;
-  struct shape **leaves;
+  struct shape **leaf;
   short allacurate;
-  int i, j, k, n;
-  char *gjked;
+  char *flagged;
 
   VECTOR (p[0], x[0], x[1], x[2]);
   VECTOR (p[1], x[0], x[4], x[2]);
@@ -135,28 +328,37 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
   VECTOR (p[7], x[3], x[1], x[5]);
 
   n = shape_leaves_count (shape);
+  size = 100;
 
-  ERRMEM (leaves = malloc (n * sizeof (struct shape*)));
+  ERRMEM (flagged = calloc (n, 1))
+  ERRMEM (leaf = malloc (2 * n * sizeof (struct shape*)));
   ERRMEM (d = malloc (n * sizeof (REAL [8])));
-  ERRMEM (gjked = calloc (n, 1))
+  ERRMEM (s = malloc (size * sizeof (REAL [3][3])));
 
-  shape_leaves (shape, leaves);
+  shape_leaves (shape, leaf);
 
   allacurate = 1;
   triang = NULL;
 
   for (i = 0; i < n; i ++)
   {
-    if (gjk (0.01*cutoff, (REAL*)p, 8, leaves[i]->data, 8, y, z) < cutoff) /* crossing this cell */
+    if (gjk (0.01*cutoff, (REAL*)p, 8, leaf[i]->data, 8, y, z) < cutoff) /* crossing this cell */
     {
-      gjked [i] = 1;
+      for (j = 0; j < 8; j ++) d [i][j] = shape_evaluate (leaf[i], p[j]);
 
-      for (j = 0; j < 8; j ++) d [i][j] = shape_evaluate (leaves[i], p[j]);
-
-      if (!accurate (p, d[i], leaves[i], cutoff))  /* but not accurate enough */
+      if (!accurate (p, d[i], leaf[i], cutoff))  /* but not accurate enough */
       {
 	allacurate = 0;
 	break;
+      }
+
+      for (j = 1; j < 8; j ++)
+      {
+	if (d [i][0] * d [i][j] <= 0.0) /* contains 0-isosurface */
+	{
+	  flagged [i] = 1;
+	  break;
+	}
       }
     }
   }
@@ -167,26 +369,48 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
   {
     for (i = 0; i < n; i ++)
     {
-      if (gjked [i])
+      if (flagged [i])
       {
-	for (j = 1; j < 8; j ++)
+	for (j = k = 0; j < n; j ++)
 	{
-	  if (d [i][0] * d [i][j] <= 0.0) /* contains 0-isosurface */
+	  if (flagged [j] && j != i)
 	  {
-	    k = polygonise (p, d[i], 0.0, 0.01*cutoff, t);
+	    leaf [n+k] = leaf [j];
+	    k ++;
+	  }
+	}
 
-	    /* TODO: split triangles by other leaves */
+	l = polygonise (p, d[i], 0.0, 0.01*cutoff, t);
 
-	    ASSERT (0, "Splitting triangles not implemented yet!");
+	for (j = 0; j < l; j ++)
+	{
+	  m = 0;
+	  split (leaf[i], t[j], &leaf[n], k, shape, cutoff, &s, &m, &size);
+
+	  if (m)
+	  {
+	    if (!triang) ERRMEM (triang = calloc (1, sizeof (struct triang)));
+
+	    ERRMEM (triang->t = realloc (triang->t, (triang->n+m)* sizeof (REAL [3][3])));
+
+	    for (o = 0; o < m; o ++)
+	    {
+	      COPY (s [o][0], triang->t [triang->n+o][0]);
+	      COPY (s [o][1], triang->t [triang->n+o][1]);
+	      COPY (s [o][2], triang->t [triang->n+o][2]);
+	    }
+
+	    triang->n += m;
 	  }
 	}
       }
     }
   }
 
-  free (leaves);
-  free (gjked);
+  free (flagged);
+  free (leaf);
   free (d);
+  free (s);
 
   if (triang) /* triangulation was created */
   {
@@ -198,6 +422,8 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
   {
     if (!oct->down [0])
     {
+      COPY6 (x, e);
+
       SUB (e+3, e, z);
 
       SCALE (z, 0.5);
