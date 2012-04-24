@@ -11,7 +11,6 @@
 #include "oaktree.h"
 #include "error.h"
 #include "alg.h"
-#include "gjk.h"
 
 /* linear shape functions for hexahedron */
 #define HEX0(x,y,z) (0.125*(1.0-(x))*(1.0-(y))*(1.0-(z)))
@@ -100,6 +99,13 @@ static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k,
       pass = (fabs (v[0]) <= cutoff &&
 	      fabs (v[1]) <= cutoff &&
 	      fabs (v[2]) <= cutoff);
+    }
+
+    if (pass) /* difference of coincident surfaces will produce zero-measure zero-isosets */
+    {         /* we try to eliminate those by perturbing the mid-point towards the insidide */
+      ADDMUL (d, -cutoff, n0, d);
+      v0 = shape_evaluate (shape, d);
+      pass = (v0 < 0.0);
     }
 
     if (pass)
@@ -311,10 +317,10 @@ struct octree* octree_create (REAL extents [6], REAL cutoff)
 void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
 {
   REAL t [5][3][3], p [8][3], (*d) [8], (*s) [3][3];
-  REAL *x = oct->extents, e [6], y [3], z [3];
+  REAL *x = oct->extents, e [6], z [3];
   int i, j, k, l, n, m, o, size;
+  struct shape **leaf, **tmp;
   struct triang *triang;
-  struct shape **leaf;
   short allacurate;
   char *flagged;
 
@@ -327,38 +333,33 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
   VECTOR (p[6], x[3], x[4], x[5]);
   VECTOR (p[7], x[3], x[1], x[5]);
 
-  n = shape_leaves_count (shape);
+  n = shape_unique_leaves (shape, p, cutoff, &leaf);
   size = 100;
 
   ERRMEM (flagged = calloc (n, 1))
-  ERRMEM (leaf = malloc (2 * n * sizeof (struct shape*)));
+  ERRMEM (tmp = malloc (n * sizeof (struct shape*)));
   ERRMEM (d = malloc (n * sizeof (REAL [8])));
   ERRMEM (s = malloc (size * sizeof (REAL [3][3])));
-
-  shape_leaves (shape, leaf);
 
   allacurate = 1;
   triang = NULL;
 
   for (i = 0; i < n; i ++)
   {
-    if (gjk (0.01*cutoff, (REAL*)p, 8, leaf[i]->data, 8, y, z) < cutoff) /* crossing this cell */
+    for (j = 0; j < 8; j ++) d [i][j] = shape_evaluate (leaf[i], p[j]);
+
+    if (!accurate (p, d[i], leaf[i], cutoff))  /* but not accurate enough */
     {
-      for (j = 0; j < 8; j ++) d [i][j] = shape_evaluate (leaf[i], p[j]);
+      allacurate = 0;
+      break;
+    }
 
-      if (!accurate (p, d[i], leaf[i], cutoff))  /* but not accurate enough */
+    for (j = 1; j < 8; j ++)
+    {
+      if (d [i][0] * d [i][j] <= 0.0) /* contains 0-isosurface */
       {
-	allacurate = 0;
+	flagged [i] = 1;
 	break;
-      }
-
-      for (j = 1; j < 8; j ++)
-      {
-	if (d [i][0] * d [i][j] <= 0.0) /* contains 0-isosurface */
-	{
-	  flagged [i] = 1;
-	  break;
-	}
       }
     }
   }
@@ -375,7 +376,7 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
 	{
 	  if (flagged [j] && j != i)
 	  {
-	    leaf [n+k] = leaf [j];
+	    tmp [k] = leaf [j];
 	    k ++;
 	  }
 	}
@@ -385,7 +386,7 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
 	for (j = 0; j < l; j ++)
 	{
 	  m = 0;
-	  split (leaf[i], t[j], &leaf[n], k, shape, cutoff, &s, &m, &size);
+	  split (leaf[i], t[j], tmp, k, shape, cutoff, &s, &m, &size);
 
 	  if (m)
 	  {
@@ -409,6 +410,7 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
 
   free (flagged);
   free (leaf);
+  free (tmp);
   free (d);
   free (s);
 

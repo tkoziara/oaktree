@@ -311,6 +311,75 @@ static PyObject* SPHERE (PyObject *self, PyObject *args, PyObject *kwds)
   return (PyObject*)out;
 }
 
+/* create cylinder */
+static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("base", "h", "r", "vcolor", "scolor");
+  struct shape *sa, *sb, *sc;
+  struct halfplane *a, *b;
+  PyObject *base, *scolor;
+  struct cylinder *c;
+  double r, h;
+  REAL x [3];
+  int vcolor;
+  SHAPE *out;
+
+  out = (SHAPE*)SHAPE_TYPE.tp_alloc (&SHAPE_TYPE, 0);
+
+  if (out)
+  {
+    PARSEKEYS ("OddiO", &base, &h, &r, &vcolor, &scolor);
+
+    TYPETEST (is_tuple (base, kwl[0], 3) && is_positive (h, kwl[1]) && is_positive (r, kwl[2]) && is_tuple (scolor, kwl[4], 3));
+
+    ERRMEM (sa = calloc (1, sizeof (struct shape)));
+    ERRMEM (a = malloc (sizeof (struct halfplane)));
+
+    a->p [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (base, 0));
+    a->p [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (base, 1));
+    a->p [2] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (base, 2));
+    a->vcolor = vcolor;
+    a->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
+    oobbsetup (a->p, r, r, 0.1*r, a->oobb);
+    sa->what = HPL;
+    sa->data = a;
+
+    ERRMEM (sb = calloc (1, sizeof (struct shape)));
+    ERRMEM (b = malloc (sizeof (struct halfplane)));
+
+    VECTOR (b->p, a->p[0], a->p[1], a->p[2]+h);
+    b->vcolor = vcolor;
+    b->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
+    oobbsetup (b->p, r, r, 0.1*r, b->oobb);
+    sb->what = HPL;
+    sb->data = b;
+
+    SUB (b->p, a->p, b->n);
+    SUB (a->p, b->p, a->n);
+    NORMALIZE (b->n);
+    NORMALIZE (a->n);
+
+    ERRMEM (sc = calloc (1, sizeof (struct shape)));
+    ERRMEM (c = malloc (sizeof (struct cylinder)));
+
+    COPY (a->p, c->p);
+    COPY (b->n, c->d);
+    c->r = r;
+    c->vcolor = vcolor;
+    c->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
+    MID (a->p, b->p, x);
+    oobbsetup (x, r, r, 0.5*LEN(c->d), c->oobb);
+    sc->what = CYL;
+    sc->data = c;
+
+    out->ptr = shape_combine (sc, MUL, shape_combine (sa, MUL, sb));
+  }
+
+  return (PyObject*)out;
+}
+
+
+
 /* create cube */
 static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
 {
@@ -540,6 +609,7 @@ static PyObject* SOLID (PyObject *self, PyObject *args, PyObject *kwds)
 static PyMethodDef methods [] =
 {
   {"SPHERE", (PyCFunction)SPHERE, METH_VARARGS|METH_KEYWORDS, "Create sphere"},
+  {"CYLINDER", (PyCFunction)CYLINDER, METH_VARARGS|METH_KEYWORDS, "Create cylinder"},
   {"CUBE", (PyCFunction)CUBE, METH_VARARGS|METH_KEYWORDS, "Create cube"},
   {"UNION", (PyCFunction)UNION, METH_VARARGS|METH_KEYWORDS, "Union of shapes"},
   {"INTERSECTION", (PyCFunction)INTERSECTION, METH_VARARGS|METH_KEYWORDS, "Intersection of shapes"},
@@ -594,6 +664,7 @@ int input (const char *path)
   PyRun_SimpleString("from oaktree import SIMULATION\n"
                      "from oaktree import SHAPE\n"
                      "from oaktree import SPHERE\n"
+                     "from oaktree import CYLINDER\n"
                      "from oaktree import CUBE\n"
                      "from oaktree import UNION\n"
                      "from oaktree import INTERSECTION\n"

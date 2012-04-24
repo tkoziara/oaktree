@@ -400,10 +400,6 @@ scolor
  - integer surface color
 \end_layout
 
-\begin_layout Standard
-\begin_inset Note Note
-status open
-
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
@@ -414,12 +410,12 @@ name "sub:CYLINDER"
 CYLINDER
 \end_layout
 
-\begin_layout Plain Layout
+\begin_layout Standard
 A cylinder shape.
 \end_layout
 
 \begin_layout Subsection*
-obj = CYLINDER (base, direc, r, h, vcolor, scolor)
+obj = CYLINDER (base, h, r, vcolor, scolor)
 \end_layout
 
 \begin_layout Itemize
@@ -449,17 +445,13 @@ base
 \begin_layout Itemize
 
 \series bold
-direc
+h
 \series default
- - tuple 
-\emph on
-
-\begin_inset Formula $\left(u,v,w\right)$
+ - height along 
+\begin_inset Formula $z$
 \end_inset
 
 
-\emph default
- defining the direction
 \end_layout
 
 \begin_layout Itemize
@@ -468,14 +460,6 @@ direc
 r
 \series default
  - radius
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-h
-\series default
- - height
 \end_layout
 
 \begin_layout Itemize
@@ -496,11 +480,6 @@ scolor
 \end_inset
 
 of surface colors
-\end_layout
-
-\end_inset
-
-
 \end_layout
 
 \begin_layout Section
