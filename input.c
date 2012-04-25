@@ -41,19 +41,6 @@ memset (&(typedesc), 0, sizeof (PyTypeObject));\
  * utilities
  */
 
-/* set up oobb */
-static void oobbsetup (REAL p [3], REAL u, REAL v, REAL w, REAL oobb [6][3])
-{
-  VECTOR (oobb[0], p[0]-u, p[1]-v, p[2]-w);
-  VECTOR (oobb[1], p[0]-u, p[1]+v, p[2]-w);
-  VECTOR (oobb[2], p[0]+u, p[1]+v, p[2]-w);
-  VECTOR (oobb[3], p[0]+u, p[1]-v, p[2]-w);
-  VECTOR (oobb[4], p[0]-u, p[1]-v, p[2]+w);
-  VECTOR (oobb[5], p[0]-u, p[1]+v, p[2]+w);
-  VECTOR (oobb[6], p[0]+u, p[1]+v, p[2]+w);
-  VECTOR (oobb[7], p[0]+u, p[1]-v, p[2]+w);
-}
-
 /* string test */
 static int is_string (PyObject *obj, char *var)
 {
@@ -302,7 +289,6 @@ static PyObject* SPHERE (PyObject *self, PyObject *args, PyObject *kwds)
     sphere->r = r;
     sphere->vcolor = vcolor;
     sphere->scolor = scolor;
-    oobbsetup (sphere->c, r, r, r, sphere->oobb);
 
     out->ptr->what = SPH;
     out->ptr->data = sphere;
@@ -338,9 +324,10 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
     a->p [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (base, 0));
     a->p [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (base, 1));
     a->p [2] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (base, 2));
+    VECTOR (a->n, 0, 0, -1);
     a->vcolor = vcolor;
     a->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
-    oobbsetup (a->p, r, r, 0.1*r, a->oobb);
+    a->r = r;
     sa->what = HPL;
     sa->data = a;
 
@@ -348,27 +335,22 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
     ERRMEM (b = malloc (sizeof (struct halfplane)));
 
     VECTOR (b->p, a->p[0], a->p[1], a->p[2]+h);
+    VECTOR (b->n, 0, 0, 1);
     b->vcolor = vcolor;
     b->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
-    oobbsetup (b->p, r, r, 0.1*r, b->oobb);
+    b->r = r;
     sb->what = HPL;
     sb->data = b;
-
-    SUB (b->p, a->p, b->n);
-    SUB (a->p, b->p, a->n);
-    NORMALIZE (b->n);
-    NORMALIZE (a->n);
 
     ERRMEM (sc = calloc (1, sizeof (struct shape)));
     ERRMEM (c = malloc (sizeof (struct cylinder)));
 
     COPY (a->p, c->p);
-    COPY (b->n, c->d);
+    VECTOR (c->d, 0, 0, 1);
     c->r = r;
     c->vcolor = vcolor;
     c->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
     MID (a->p, b->p, x);
-    oobbsetup (x, r, r, 0.5*LEN(c->d), c->oobb);
     sc->what = CYL;
     sc->data = c;
 
@@ -389,7 +371,6 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
   struct halfplane *h;
   double u, v, w;
   double p [3];
-  REAL q [3];
   int vcolor;
   SHAPE *out;
 
@@ -410,74 +391,69 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     /* -1, 0, 0 */
     ERRMEM (a = calloc (1, sizeof (struct shape)));
     ERRMEM (h = malloc (sizeof (struct halfplane)));
-    VECTOR (h->p, p[0], p[1], p[2]);
+    VECTOR (h->p, p[0], p[1]+0.5*v, p[2]+0.5*w);
     VECTOR (h->n, -1, 0, 0);
+    h->r = ALG_SQR2 * MAX (v, w);
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
     a->what = HPL;
     a->data = h;
-    VECTOR (q, p[0], p[1]+0.5*v, p[2]+0.5*w);
-    oobbsetup (q, 0.05*u, 0.5*v, 0.5*w, h->oobb);
 
    /* 0, -1, 0 */
     ERRMEM (b = calloc (1, sizeof (struct shape)));
     ERRMEM (h = malloc (sizeof (struct halfplane)));
-    VECTOR (h->p, p[0], p[1], p[2]);
+    VECTOR (h->p, p[0]+0.5*u, p[1], p[2]+0.5*w);
     VECTOR (h->n, 0, -1, 0);
+    h->r = ALG_SQR2 * MAX (u, w);
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
     b->what = HPL;
     b->data = h;
-    VECTOR (q, p[0]+0.5*u, p[1], p[2]+0.5*w);
-    oobbsetup (q, 0.5*u, 0.05*v, 0.5*w, h->oobb);
 
     /* 0, 0, -1 */
     ERRMEM (c = calloc (1, sizeof (struct shape)));
     ERRMEM (h = malloc (sizeof (struct halfplane)));
-    VECTOR (h->p, p[0], p[1], p[2]);
+    VECTOR (h->p, p[0]+0.5*u, p[1]+0.5*v, p[2]);
     VECTOR (h->n, 0, 0, -1);
+    h->r = ALG_SQR2 * MAX (u, v);
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
     c->what = HPL;
     c->data = h;
-    VECTOR (q, p[0]+0.5*u, p[1]+0.5*v, p[2]);
-    oobbsetup (q, 0.5*u, 0.5*v, 0.05*w, h->oobb);
 
     /* 1, 0, 0 */
     ERRMEM (d = calloc (1, sizeof (struct shape)));
     ERRMEM (h = malloc (sizeof (struct halfplane)));
-    VECTOR (h->p, p[0]+u, p[1], p[2]);
+    VECTOR (h->p, p[0]+u, p[1]+0.5*v, p[2]+0.5*w);
     VECTOR (h->n, 1, 0, 0);
+    h->r = ALG_SQR2 * MAX (v, w);
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 3));
     d->what = HPL;
     d->data = h;
-    VECTOR (q, p[0]+u, p[1]+0.5*v, p[2]+0.5*w);
-    oobbsetup (q, 0.05*u, 0.5*v, 0.5*w, h->oobb);
 
    /* 0, 1, 0 */
     ERRMEM (e = calloc (1, sizeof (struct shape)));
     ERRMEM (h = malloc (sizeof (struct halfplane)));
-    VECTOR (h->p, p[0], p[1]+v, p[2]);
+    VECTOR (h->p, p[0]+0.5*u, p[1]+v, p[2]+0.5*w);
     VECTOR (h->n, 0, 1, 0);
+    h->r = ALG_SQR2 * MAX (u, w);
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 4));
     e->what = HPL;
     e->data = h;
-    VECTOR (q, p[0]+0.5*u, p[1]+v, p[2]+0.5*w);
-    oobbsetup (q, 0.5*u, 0.05*v, 0.5*w, h->oobb);
 
     /* 0, 0, 1 */
     ERRMEM (f = calloc (1, sizeof (struct shape)));
     ERRMEM (h = malloc (sizeof (struct halfplane)));
     VECTOR (h->p, p[0], p[1], p[2]+w);
+    VECTOR (h->p, p[0]+0.5*u, p[1]+0.5*v, p[2]+w);
     VECTOR (h->n, 0, 0, 1);
+    h->r = ALG_SQR2 * MAX (u, v);
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 5));
     f->what = HPL;
     f->data = h;
-    VECTOR (q, p[0]+0.5*u, p[1]+0.5*v, p[2]+w);
-    oobbsetup (q, 0.5*u, 0.5*v, 0.05*w, h->oobb);
 
     shape = shape_combine (shape_combine (shape_combine (a, MUL, d), MUL, shape_combine (b, MUL, e)), MUL, shape_combine (c, MUL, f));
 

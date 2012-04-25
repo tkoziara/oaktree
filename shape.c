@@ -10,7 +10,6 @@
 #include "oaktree.h"
 #include "error.h"
 #include "alg.h"
-#include "gjk.h"
 
 /* recursive copy */
 static struct shape* recursive_copy (struct shape *shape)
@@ -85,143 +84,147 @@ static int shape_leaves_count (struct shape *shape)
 }
 
 /* return shape leaves with counter */
-static void shape_leaves_with_counter (struct shape *shape, REAL p[8][3], REAL cutoff, struct shape **leaves, int *i)
+static void shape_leaves_with_counter (struct shape *shape, REAL c [3], REAL r, struct shape **leaves, int *i)
 {
+  struct halfplane *halfplane;
+  struct cylinder *cylinder;
+  struct sphere *sphere;
+  REAL d [4];
+
   switch (shape->what)
   {
   case ADD:
   case MUL:
   case SUB:
-    shape_leaves_with_counter (shape->left, p, cutoff, leaves, i);
-    shape_leaves_with_counter (shape->right, p, cutoff, leaves, i);
+    shape_leaves_with_counter (shape->left, c, r, leaves, i);
+    shape_leaves_with_counter (shape->right, c, r, leaves, i);
     break;
   case HPL:
-  case SPH:
-  case CYL:
-    {
-      REAL a [3], b [3];
+    halfplane = shape->data;
+    SUB (c, halfplane->p, d);
+    d [3] = r + halfplane->r;
 
-      if (gjk (0.01*cutoff, (REAL*)p, 8, shape->data, 8, a, b) < cutoff)
-      {
-	leaves [*i] = shape;
-	(*i) ++;
-      }
+    if (DOT (d, d) <= d[3]*d[3])
+    {
+      leaves [*i] = shape;
+      (*i) ++;
+    }
+    break;
+  case SPH:
+    sphere = shape->data;
+    SUB (c, sphere->c, d);
+    d [3] = r + sphere->r;
+
+    if (DOT (d, d) <= d[3]*d[3])
+    {
+      leaves [*i] = shape;
+      (*i) ++;
+    }
+    break;
+  case CYL:
+    cylinder = shape->data;
+
+    if (shape_evaluate (shape, c) <= r)
+    {
+      leaves [*i] = shape;
+      (*i) ++;
     }
     break;
   }
 }
 
-/* oobb rotate */
-inline static void oobb_rotate (REAL oobb [8][3], REAL *point, REAL *matrix)
-{
-  REAL v [3];
-  int i;
-
-  for (i = 0; i < 8; i++)
-  {
-    SUB (oobb[i], point, v);
-    NVADDMUL (point, matrix, v, oobb[i]);
-  }
-}
-
 /* compare leaves */
-int compare_leaves (struct shape **sl, struct shape **sr)
+int compare_leaves (struct shape **ll, struct shape **rr)
 {
-  REAL v [6];
+  REAL u, v, w, a [3];
 
-  if ((*sl)->what < (*sr)->what) return -1;
-  else if ((*sl)->what > (*sr)->what) return 1;
-  else switch ((*sl)->what)
+  if ((*ll)->what < (*rr)->what) return -1;
+  else if ((*ll)->what > (*rr)->what) return 1;
+  else switch ((*ll)->what)
   {
     case HPL:
     {
-      struct halfplane *l = (*sl)->data,
-		       *r = (*sr)->data;
+      struct halfplane *l = (*ll)->data, *r = (*rr)->data;
 
-      SUB (l->n, r->n, v);
-      v [3] = -DOT (l->p, l->n);
-      v [4] = -DOT (r->p, r->n);
-      v [5] = v[3] - v[4];
-
-      if (fabs (v[0]) < 1E-10) /* XXX */
+      u = l->n[0] - r->n[0];
+      if (fabs (u) < 1E-10)
       {
-	if (fabs (v[1]) < 1E-10)
+         u = l->n[1] - r->n[1];
+	if (fabs (u) < 1E-10)
 	{
-	  if (fabs (v[2]) < 1E-10)
+           u = l->n[2] - r->n[2];
+	  if (fabs (u) < 1E-10)
 	  {
-	    if (fabs (v[5]) < 1E-10) return 0;
-	    else if (v[3] < v[4]) return -1;
-	    else return 1;
+	    u = -DOT (l->p, l->n);
+	    v = -DOT (r->p, r->n);
+	    w = u - v; /* difference of values at (0, 0, 0) */
+
+	    if (fabs (w) < 1E-10) return 0; /* XXX */
 	  }
-	  else if (l->n[2] < r->n[2]) return -1;
-	  else return 1;
 	}
-	else if (l->n[1] < r->n[1]) return -1;
-	else return 1;
       }
-      else if (l->n[0] < r->n[0]) return -1;
+
+      if (l < r) return -1;
       else return 1;
     }
     break;
     case SPH:
     {
-      struct sphere *l = (*sl)->data,
-		    *r = (*sr)->data;
+      struct sphere *l = (*ll)->data, *r = (*rr)->data;
 
-      SUB (l->c, r->c, v);
-      v [3] = l->r - r->r;
-
-      if (fabs (v[0]) < 1E-10)
+      u = l->c[0] - r->c[0];
+      if (fabs (u) < 1E-10)
       {
-	if (fabs (v[1]) < 1E-10)
+        u = l->c[1] - r->c[1];
+	if (fabs (u) < 1E-10)
 	{
-	  if (fabs (v[2]) < 1E-10)
+          u = l->c[2] - r->c[2];
+	  if (fabs (u) < 1E-10)
 	  {
-	    if (fabs (v[3]) < 1E-10) return 0;
-	    else if (l->r < r->r) return -1;
-	    else return 1;
+            u = l->r - r->r;
+	    if (fabs (u) < 1E-10) return 0;
 	  }
-	  else if (l->c[2] < r->c[2]) return -1;
-	  else return 1;
 	}
-	else if (l->c[1] < r->c[1]) return -1;
-	else return 1;
       }
-      else if (l->c[0] < r->c[0]) return -1;
+
+      if (l < r) return -1;
       else return 1;
     }
     break;
     case CYL:
     {
-      struct cylinder *l = (*sl)->data,
-		      *r = (*sr)->data;
+      struct cylinder *l = (*ll)->data, *r = (*rr)->data;
 
-      PRODUCT (l->d, r->d, v);
-      v [3] = shape_evaluate (*sl, r->p);
-      v [4] = l->r - r->r;
-
-      if (fabs (v[0]) < 1E-10)
+      u = l->d[0] - r->d[0];
+      if (fabs (u) < 1E-10)
       {
-	if (fabs (v[1]) < 1E-10)
+        u = l->d[1] - r->d[1];
+	if (fabs (u) < 1E-10)
 	{
-	  if (fabs (v[2]) < 1E-10)
+          u = l->d[2] - r->d[2];
+	  if (fabs (u) < 1E-10)
 	  {
-	    if (fabs (v[3]) < 1E-10)
+	    u = l->r - r->r;
+	    if (fabs (u) < 1E-10)
 	    {
-	      if (fabs (v[4]) < 1E-10) return 0;
-	      else if (l->r < r->r) return -1;
-	      else return 1;
+	      SUB (l->p, r->p, a);
+
+	      u = a[1]*l->d[2] - a[2]*l->d[1]; /* (l->p-r->p) x l->d == 0 */
+	      if (fabs (u) < 1E-10)
+	      {
+	        v = a[2]*l->d[0] - a[0]*l->d[2];
+	        if (fabs (v) < 1E-10)
+		{
+	          w = a[0]*l->d[1] - a[1]*l->d[0];
+	          if (fabs (w) < 1E-10) return 0;
+		}
+	      }
 	    }
-	    else if (l->r < r->r) return -1;
-	    else return 1;
 	  }
-	  else if (l->d[2] < r->d[2]) return -1;
-	  else return 1;
 	}
-	else if (l->d[1] < r->d[1]) return -1;
-	else return 1;
       }
-      else if (l->d[0] < r->d[0]) return -1;
+
+      if (l < r) return -1;
       else return 1;
     }
     break;
@@ -263,8 +266,8 @@ struct shape* shape_combine (struct shape *left, short what, struct shape *right
   return shape;
 }
 
-/* output unique shape leaves inside of a grid cell and return their count */
-int shape_unique_leaves (struct shape *shape, REAL p [8][3], REAL cutoff, struct shape ***leaves)
+/* output unique shape leaves overlapping (c,r) sphere and return their count */
+int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves)
 {
   int i = 0, j, k, n;
   struct shape **leaf;
@@ -273,7 +276,7 @@ int shape_unique_leaves (struct shape *shape, REAL p [8][3], REAL cutoff, struct
 
   ERRMEM ((*leaves) = leaf = malloc (n * sizeof (struct shape*)));
 
-  shape_leaves_with_counter (shape, p, cutoff, leaf, &i);
+  shape_leaves_with_counter (shape, c, r, leaf, &i);
 
   if (i <= 1) return i;
 
@@ -315,7 +318,6 @@ void shape_rotate (struct shape *shape, REAL *point, REAL *matrix)
       NVADDMUL (point, matrix, v, data->p);
       COPY (data->n, v);
       NVMUL (matrix, v, data->n);
-      oobb_rotate (data->oobb, point, matrix);
     }
     break;
   case SPH:
@@ -324,7 +326,6 @@ void shape_rotate (struct shape *shape, REAL *point, REAL *matrix)
 
       SUB (data->c, point, v);
       NVADDMUL (point, matrix, v, data->c);
-      oobb_rotate (data->oobb, point, matrix);
     }
     break;
   case CYL:
@@ -335,7 +336,6 @@ void shape_rotate (struct shape *shape, REAL *point, REAL *matrix)
       NVADDMUL (point, matrix, v, data->p);
       COPY (data->d, v);
       NVMUL (matrix, v, data->d);
-      oobb_rotate (data->oobb, point, matrix);
     }
     break;
   }

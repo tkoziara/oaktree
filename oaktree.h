@@ -8,17 +8,13 @@
 
 struct halfplane
 {
-  REAL oobb [8][3];
-
-  REAL p [3], n [3];
+  REAL p [3], n [3], r;
 
   short vcolor, scolor;
 };
 
 struct sphere
 {
-  REAL oobb [8][3];
-
   REAL c [3], r;
 
   short vcolor, scolor;
@@ -26,8 +22,6 @@ struct sphere
 
 struct cylinder
 {
-  REAL oobb [8][3];
-
   REAL p [3], d [3], r;
 
   short vcolor, scolor;
@@ -58,8 +52,8 @@ struct shape* shape_copy (struct shape *shape, char *label);
 /* combine two shapes */
 struct shape* shape_combine (struct shape *left, short what, struct shape *right);
 
-/* output unique shape leaves inside of a grid cell and return their count */
-int shape_unique_leaves (struct shape *shape, REAL p [8][3], REAL cutoff, struct shape ***leaves);
+/* output unique shape leaves overlapping (c,r) sphere and return their count */
+int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves);
 
 /* rotate shape about a point using a rotation matrix */
 void shape_rotate (struct shape *shape, REAL *point, REAL *matrix);

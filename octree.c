@@ -12,46 +12,16 @@
 #include "error.h"
 #include "alg.h"
 
-/* linear shape functions for hexahedron */
-#define HEX0(x,y,z) (0.125*(1.0-(x))*(1.0-(y))*(1.0-(z)))
-#define HEX1(x,y,z) (0.125*(1.0+(x))*(1.0-(y))*(1.0-(z)))
-#define HEX2(x,y,z) (0.125*(1.0+(x))*(1.0+(y))*(1.0-(z)))
-#define HEX3(x,y,z) (0.125*(1.0-(x))*(1.0+(y))*(1.0-(z)))
-#define HEX4(x,y,z) (0.125*(1.0-(x))*(1.0-(y))*(1.0+(z)))
-#define HEX5(x,y,z) (0.125*(1.0+(x))*(1.0-(y))*(1.0+(z)))
-#define HEX6(x,y,z) (0.125*(1.0+(x))*(1.0+(y))*(1.0+(z)))
-#define HEX7(x,y,z) (0.125*(1.0-(x))*(1.0+(y))*(1.0+(z)))
-
 /* accuracy test */
-static int accurate (REAL p [8][3], REAL d [8], struct shape *shape, REAL cutoff)
+static int accurate (REAL q [3], REAL d [8], struct shape *shape, REAL cutoff)
 {
-  REAL l [][3] = {{-0.5, -0.5, -0.5}, {0.5, -0.5, -0.5}, {0.5, 0.5, -0.5}, {-0.5, 0.5, -0.5},
-                  {-0.5, -0.5, 0.5}, {0.5, -0.5, 0.5}, {0.5, 0.5, 0.5}, {-0.5, 0.5, 0.5}, {0, 0, 0}};
-  REAL q [3], u, v, w;
-  int i;
+  REAL u, v, w;
 
-#define point(l0, l1, l2, i) (p[0][i]*HEX0(l0, l1, l2) + p[1][i]*HEX1(l0, l1, l2) +\
-                              p[2][i]*HEX2(l0, l1, l2) + p[3][i]*HEX3(l0, l1, l2) +\
-		              p[4][i]*HEX4(l0, l1, l2) + p[5][i]*HEX5(l0, l1, l2) +\
-		              p[6][i]*HEX6(l0, l1, l2) + p[7][i]*HEX7(l0, l1, l2))
-
-#define interpolate(l0, l1, l2) (d[0]*HEX0(l0, l1, l2) + d[1]*HEX1(l0, l1, l2) +\
-                                 d[2]*HEX2(l0, l1, l2) + d[3]*HEX3(l0, l1, l2) +\
-				 d[4]*HEX4(l0, l1, l2) + d[5]*HEX5(l0, l1, l2) +\
-				 d[6]*HEX6(l0, l1, l2) + d[7]*HEX7(l0, l1, l2))
-
-  for (i = 0; i < 9; i ++)
-  {
-    q [0] = point (l[i][0], l[i][1], l[i][2], 0);
-    q [1] = point (l[i][0], l[i][1], l[i][2], 1);
-    q [2] = point (l[i][0], l[i][1], l[i][2], 2);
-    u = interpolate (l[i][0], l[i][1], l[i][2]);
-    v = shape_evaluate (shape, q);
-    w = u - v;
-    if (fabs (w) > cutoff) return 0;
-  }
-
-  return 1;
+  u = 0.125 * (d[0]+d[1]+d[2]+d[3]+d[4]+d[5]+d[6]+d[7]);
+  v = shape_evaluate (shape, q);
+  w = u - v;
+  if (fabs (w) > cutoff) return 0;
+  else return 1;
 }
 
 /* find zero point for u * v < 0 */
@@ -94,7 +64,7 @@ static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k,
 	           shape_evaluate (shape, t[1]),
 		   shape_evaluate (shape, t[2])};
 
-      cutoff *= 1.25; /* XXX */
+      cutoff *= ALG_SQR2; /* XXX */
 
       pass = (fabs (v[0]) <= cutoff &&
 	      fabs (v[1]) <= cutoff &&
@@ -333,7 +303,10 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
   VECTOR (p[6], x[3], x[4], x[5]);
   VECTOR (p[7], x[3], x[1], x[5]);
 
-  n = shape_unique_leaves (shape, p, cutoff, &leaf);
+  MID (x, x+3, z);
+  SUB (z, x, e);
+
+  n = shape_unique_leaves (shape, z, LEN (e), &leaf);
   size = 100;
 
   ERRMEM (flagged = calloc (n, 1))
@@ -348,7 +321,7 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
   {
     for (j = 0; j < 8; j ++) d [i][j] = shape_evaluate (leaf[i], p[j]);
 
-    if (!accurate (p, d[i], leaf[i], cutoff))  /* but not accurate enough */
+    if (!accurate (z, d[i], leaf[i], cutoff))  /* but not accurate enough */
     {
       allacurate = 0;
       break;

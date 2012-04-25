@@ -4,7 +4,6 @@ OB0 =   obj/input.o \
 	obj/polygon.o \
 	obj/octree.o \
 	obj/shape.o \
-	obj/gjk.o \
 
 ifeq ($(OPENGL),yes)
 
@@ -73,10 +72,7 @@ obj/polygon.o: polygon.c polygon.h error.h alg.h
 obj/octree.o: octree.c oaktree.h polygon.h error.h alg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-obj/shape.o: shape.c oaktree.h error.h alg.h gjk.h
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-obj/gjk.o: gjk.c gjk.h alg.h
+obj/shape.o: shape.c oaktree.h error.h alg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 obj/oaktree.o: oaktree.c oaktree.h viewer.h render.h input.h error.h alg.h

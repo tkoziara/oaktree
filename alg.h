@@ -10,6 +10,7 @@
 #define __alg__
 
 #define ALG_PI 3.14159265358979323846 
+#define ALG_SQR2 1.4142135623730951
 
 #ifndef MIN
   #define MIN(v, w) ((v) < (w) ? (v) : (w))
