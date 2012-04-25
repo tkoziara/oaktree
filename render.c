@@ -92,12 +92,11 @@ void render_shapes (struct octree *oct, REAL cutoff)
 
   for (triang = oct->triang; triang; triang = triang->next)
   {
-    REAL (*t) [3][3] = triang->t, n [3];
+    REAL (*t) [4][3] = triang->t;
 
     for (i = 0; i < triang->n; i ++)
     {
-      NORMAL (t[i][0], t[i][1], t[i][2], n); /* FIXME: let OpenGL do this */
-      glNormal3f (n[0], n[1], n[2]);
+      glNormal3f (t[i][3][0], t[i][3][1], t[i][3][2]);
       glVertex3f (t[i][0][0], t[i][0][1], t[i][0][2]);
       glVertex3f (t[i][1][0], t[i][1][1], t[i][1][2]);
       glVertex3f (t[i][2][0], t[i][2][1], t[i][2][2]);

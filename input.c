@@ -523,6 +523,27 @@ static PyObject* DIFFERENCE (PyObject *self, PyObject *args, PyObject *kwds)
   return (PyObject*)out;
 }
 
+/* move shape */
+static PyObject* MOVE (PyObject *self, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("shape", "vector");
+  PyObject *vector;
+  SHAPE *shape;
+  REAL v [3];
+
+  PARSEKEYS ("OO", &shape, &vector);
+
+  TYPETEST (is_shape (shape, kwl[0]) && is_tuple (vector, kwl[2], 3));
+
+  v [0] = PyFloat_AsDouble (PyTuple_GetItem (vector, 0));
+  v [1] = PyFloat_AsDouble (PyTuple_GetItem (vector, 1));
+  v [2] = PyFloat_AsDouble (PyTuple_GetItem (vector, 2));
+
+  shape_move (shape->ptr, v);
+
+  Py_RETURN_NONE;
+}
+
 /* rotate shape */
 static PyObject* ROTATE (PyObject *self, PyObject *args, PyObject *kwds)
 {
@@ -590,6 +611,7 @@ static PyMethodDef methods [] =
   {"UNION", (PyCFunction)UNION, METH_VARARGS|METH_KEYWORDS, "Union of shapes"},
   {"INTERSECTION", (PyCFunction)INTERSECTION, METH_VARARGS|METH_KEYWORDS, "Intersection of shapes"},
   {"DIFFERENCE", (PyCFunction)DIFFERENCE, METH_VARARGS|METH_KEYWORDS, "Difference of shapes"},
+  {"MOVE", (PyCFunction)MOVE, METH_VARARGS|METH_KEYWORDS, "Move shape"},
   {"ROTATE", (PyCFunction)ROTATE, METH_VARARGS|METH_KEYWORDS, "Rotate shape"},
   {"SOLID", (PyCFunction)SOLID, METH_VARARGS|METH_KEYWORDS, "Create solid"},
   {NULL, 0, 0, NULL}
@@ -645,6 +667,7 @@ int input (const char *path)
                      "from oaktree import UNION\n"
                      "from oaktree import INTERSECTION\n"
                      "from oaktree import DIFFERENCE\n"
+                     "from oaktree import MOVE\n"
                      "from oaktree import ROTATE\n"
                      "from oaktree import SOLID\n");
 

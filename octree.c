@@ -35,7 +35,7 @@ inline static void zeropoint (REAL a [3], REAL b [3], REAL u, REAL v, REAL z [3]
 }
 
 /* split triangle */
-static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k, struct shape *shape, REAL cutoff, REAL (**out) [3][3], int *m, int *size)
+static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k, struct shape *shape, REAL cutoff, REAL (**out) [4][3], int *m, int *size)
 {
   REAL d [3], s [3][3][3];
   int i, j;
@@ -45,7 +45,7 @@ static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k,
     if ((*m)+1 >= (*size))
     {
       (*size) *= 2;
-      ERRMEM ((*out) = realloc ((*out), (*size) * sizeof (REAL [3][3])));
+      ERRMEM ((*out) = realloc ((*out), (*size) * sizeof (REAL [4][3])));
     }
 
     MID3 (t[0], t[1], t[2], d);
@@ -94,6 +94,8 @@ static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k,
 	COPY (t[1], (*out) [*m][1]);
 	COPY (t[0], (*out) [*m][2]);
       }
+
+      COPY (n0, (*out) [*m][3]);
 
       (*m) ++;
     }
@@ -244,7 +246,7 @@ struct octree* octree_create (REAL extents [6], REAL cutoff)
     oct->down [0] = octree_create (e, cutoff);
     oct->down [0]->up = oct;
 
-    VECTOR (e, extents[0]+d[0], extents[1], extents[2]);
+    VECTOR (e, extents[0], extents[1]+d[1], extents[2]);
     VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
     oct->down [1] = octree_create (e, cutoff);
     oct->down [1]->up = oct;
@@ -254,7 +256,7 @@ struct octree* octree_create (REAL extents [6], REAL cutoff)
     oct->down [2] = octree_create (e, cutoff);
     oct->down [2]->up = oct;
 
-    VECTOR (e, extents[0], extents[1]+d[1], extents[2]);
+    VECTOR (e, extents[0]+d[0], extents[1], extents[2]);
     VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
     oct->down [3] = octree_create (e, cutoff);
     oct->down [3]->up = oct;
@@ -264,7 +266,7 @@ struct octree* octree_create (REAL extents [6], REAL cutoff)
     oct->down [4] = octree_create (e, cutoff);
     oct->down [4]->up = oct;
 
-    VECTOR (e, extents[0]+d[0], extents[1], extents[2]+d[2]);
+    VECTOR (e, extents[0], extents[1]+d[1], extents[2]+d[2]);
     VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
     oct->down [5] = octree_create (e, cutoff);
     oct->down [5]->up = oct;
@@ -274,7 +276,7 @@ struct octree* octree_create (REAL extents [6], REAL cutoff)
     oct->down [6] = octree_create (e, cutoff);
     oct->down [6]->up = oct;
 
-    VECTOR (e, extents[0], extents[1]+d[1], extents[2]+d[2]);
+    VECTOR (e, extents[0]+d[0], extents[1], extents[2]+d[2]);
     VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
     oct->down [7] = octree_create (e, cutoff);
     oct->down [7]->up = oct;
@@ -286,13 +288,11 @@ struct octree* octree_create (REAL extents [6], REAL cutoff)
 /* insert shape and refine octree down to a cutoff edge length */
 void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
 {
-  REAL t [5][3][3], p [8][3], (*d) [8], (*s) [3][3];
-  REAL *x = oct->extents, e [6], z [3];
+  REAL t [5][3][3], p [8][3], q [2][3], (*d) [8], (*s) [4][3], *x = oct->extents;
   int i, j, k, l, n, m, o, size;
+  char allaccurate, *flagged;
   struct shape **leaf, **tmp;
   struct triang *triang;
-  short allacurate;
-  char *flagged;
 
   VECTOR (p[0], x[0], x[1], x[2]);
   VECTOR (p[1], x[0], x[4], x[2]);
@@ -303,27 +303,27 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
   VECTOR (p[6], x[3], x[4], x[5]);
   VECTOR (p[7], x[3], x[1], x[5]);
 
-  MID (x, x+3, z);
-  SUB (z, x, e);
+  MID (p[0], p[6], q[0]);
+  SUB (q[0], p[0], q[1]);
 
-  n = shape_unique_leaves (shape, z, LEN (e), &leaf);
-  size = 100;
+  n = shape_unique_leaves (shape, q[0], LEN (q[1]), &leaf);
+  size = 128;
 
   ERRMEM (flagged = calloc (n, 1))
   ERRMEM (tmp = malloc (n * sizeof (struct shape*)));
   ERRMEM (d = malloc (n * sizeof (REAL [8])));
-  ERRMEM (s = malloc (size * sizeof (REAL [3][3])));
+  ERRMEM (s = malloc (size * sizeof (REAL [4][3])));
 
-  allacurate = 1;
+  allaccurate = 1;
   triang = NULL;
 
   for (i = 0; i < n; i ++)
   {
     for (j = 0; j < 8; j ++) d [i][j] = shape_evaluate (leaf[i], p[j]);
 
-    if (!accurate (z, d[i], leaf[i], cutoff))  /* but not accurate enough */
+    if (!accurate (q[0], d[i], leaf[i], cutoff))  /* but not accurate enough */
     {
-      allacurate = 0;
+      allaccurate = 0;
       break;
     }
 
@@ -339,7 +339,7 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
 
   /* if allcaturate == 1 extract triangles */
 
-  if (allacurate)
+  if (allaccurate)
   {
     for (i = 0; i < n; i ++)
     {
@@ -365,13 +365,14 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
 	  {
 	    if (!triang) ERRMEM (triang = calloc (1, sizeof (struct triang)));
 
-	    ERRMEM (triang->t = realloc (triang->t, (triang->n+m)* sizeof (REAL [3][3])));
+	    ERRMEM (triang->t = realloc (triang->t, (triang->n+m)* sizeof (REAL [4][3])));
 
 	    for (o = 0; o < m; o ++)
 	    {
 	      COPY (s [o][0], triang->t [triang->n+o][0]);
 	      COPY (s [o][1], triang->t [triang->n+o][1]);
 	      COPY (s [o][2], triang->t [triang->n+o][2]);
+	      COPY (s [o][3], triang->t [triang->n+o][3]);
 	    }
 
 	    triang->n += m;
@@ -393,56 +394,52 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
     triang->next = oct->triang;
     oct->triang = triang;
   }
-  else if (!allacurate) /* not enough accuracy */
+  else if (!allaccurate) /* not enough accuracy */
   {
     if (!oct->down [0])
     {
-      COPY6 (x, e);
+      if (q[1][0] <= cutoff && q[1][1] <= cutoff && q[1][2] <= cutoff) return;
 
-      SUB (e+3, e, z);
+      x = (REAL*) t;
 
-      SCALE (z, 0.5);
-
-      if (z [0] <= cutoff && z [1] <= cutoff && z [2] <= cutoff) return;
-
-      VECTOR (e, x[0], x[1], x[2]);
-      VECTOR (e+3, e[0]+z[0], e[1]+z[1], e[2]+z[2]);
-      oct->down [0] = octree_create (e, FLT_MAX);
+      VECTOR (x, p[0][0], p[0][1], p[0][2]);
+      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      oct->down [0] = octree_create (x, FLT_MAX);
       oct->down [0]->up = oct;
 
-      VECTOR (e, x[0]+z[0], x[1], x[2]);
-      VECTOR (e+3, e[0]+z[0], e[1]+z[1], e[2]+z[2]);
-      oct->down [1] = octree_create (e, FLT_MAX);
+      VECTOR (x, p[0][0], p[0][1]+q[1][1], p[0][2]);
+      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      oct->down [1] = octree_create (x, FLT_MAX);
       oct->down [1]->up = oct;
 
-      VECTOR (e, x[0]+z[0], x[1]+z[1], x[2]);
-      VECTOR (e+3, e[0]+z[0], e[1]+z[1], e[2]+z[2]);
-      oct->down [2] = octree_create (e, FLT_MAX);
+      VECTOR (x, p[0][0]+q[1][0], p[0][1]+q[1][1], p[0][2]);
+      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      oct->down [2] = octree_create (x, FLT_MAX);
       oct->down [2]->up = oct;
 
-      VECTOR (e, x[0], x[1]+z[1], x[2]);
-      VECTOR (e+3, e[0]+z[0], e[1]+z[1], e[2]+z[2]);
-      oct->down [3] = octree_create (e, FLT_MAX);
+      VECTOR (x, p[0][0]+q[1][0], p[0][1], p[0][2]);
+      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      oct->down [3] = octree_create (x, FLT_MAX);
       oct->down [3]->up = oct;
 
-      VECTOR (e, x[0], x[1], x[2]+z[2]);
-      VECTOR (e+3, e[0]+z[0], e[1]+z[1], e[2]+z[2]);
-      oct->down [4] = octree_create (e, FLT_MAX);
+      VECTOR (x, p[0][0], p[0][1], p[0][2]+q[1][2]);
+      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      oct->down [4] = octree_create (x, FLT_MAX);
       oct->down [4]->up = oct;
 
-      VECTOR (e, x[0]+z[0], x[1], x[2]+z[2]);
-      VECTOR (e+3, e[0]+z[0], e[1]+z[1], e[2]+z[2]);
-      oct->down [5] = octree_create (e, FLT_MAX);
+      VECTOR (x, p[0][0], p[0][1]+q[1][1], p[0][2]+q[1][2]);
+      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      oct->down [5] = octree_create (x, FLT_MAX);
       oct->down [5]->up = oct;
 
-      VECTOR (e, x[0]+z[0], x[1]+z[1], x[2]+z[2]);
-      VECTOR (e+3, e[0]+z[0], e[1]+z[1], e[2]+z[2]);
-      oct->down [6] = octree_create (e, FLT_MAX);
+      VECTOR (x, p[0][0]+q[1][0], p[0][1]+q[1][1], p[0][2]+q[1][2]);
+      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      oct->down [6] = octree_create (x, FLT_MAX);
       oct->down [6]->up = oct;
 
-      VECTOR (e, x[0], x[1]+z[1], x[2]+z[2]);
-      VECTOR (e+3, e[0]+z[0], e[1]+z[1], e[2]+z[2]);
-      oct->down [7] = octree_create (e, FLT_MAX);
+      VECTOR (x, p[0][0]+q[1][0], p[0][1], p[0][2]+q[1][2]);
+      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      oct->down [7] = octree_create (x, FLT_MAX);
       oct->down [7]->up = oct;
     }
 
@@ -453,4 +450,17 @@ void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff)
 /* free octree memory */
 void octree_destroy (struct octree *oct)
 {
+  struct triang *triang, *next;
+  int i;
+
+  if (oct->down [0]) for (i = 0; i < 8; i ++) octree_destroy (oct->down [i]);
+
+  for (triang = oct->triang; triang; triang = next)
+  {
+    next = triang->next;
+    free (triang->t);
+    free (triang);
+  }
+
+  free (oct);
 }

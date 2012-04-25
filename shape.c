@@ -147,7 +147,7 @@ int compare_leaves (struct shape **ll, struct shape **rr)
       struct halfplane *l = (*ll)->data, *r = (*rr)->data;
 
       u = l->n[0] - r->n[0];
-      if (fabs (u) < 1E-10)
+      if (fabs (u) < 1E-10) /* fine <= normalized */
       {
          u = l->n[1] - r->n[1];
 	if (fabs (u) < 1E-10)
@@ -159,7 +159,7 @@ int compare_leaves (struct shape **ll, struct shape **rr)
 	    v = -DOT (r->p, r->n);
 	    w = u - v; /* difference of values at (0, 0, 0) */
 
-	    if (fabs (w) < 1E-10) return 0; /* XXX */
+	    if (fabs (w) < 1E-10) return 0; /* XXX and repeats below */
 	  }
 	}
       }
@@ -297,6 +297,41 @@ int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape *
   return j+1;
 }
 
+/* move shape */
+void shape_move (struct shape *shape, REAL *vector)
+{
+  switch (shape->what)
+  {
+  case ADD:
+  case MUL:
+  case SUB:
+    shape_move (shape->left, vector);
+    shape_move (shape->right, vector);
+    break;
+  case HPL:
+    {
+      struct halfplane *data = shape->data;
+
+      ACC (vector, data->p);
+    }
+    break;
+  case SPH:
+    {
+      struct sphere *data = shape->data;
+
+      ACC (vector, data->c);
+    }
+    break;
+  case CYL:
+    {
+      struct cylinder *data = shape->data;
+
+      ACC (vector, data->p);
+    }
+    break;
+  }
+}
+
 /* rotate shape about a point using a rotation matrix */
 void shape_rotate (struct shape *shape, REAL *point, REAL *matrix)
 {
@@ -384,7 +419,10 @@ REAL shape_evaluate (struct shape *shape, REAL *point)
     v = b / a;
     ADDMUL (cylinder->p, v, cylinder->d, z);
     SUB (point, z, z);
-    v = LEN (z) - cylinder->r;
+    b = LEN (z);
+    a = cylinder->r;
+    if (b < a) b = 0.5*((b*b)/a + a); /* smooth out inside with y = x**2/(2r) + r/2 */
+    v = b - a;
     break;
   }
 
@@ -405,49 +443,22 @@ REAL shape_normal (struct shape *shape, REAL *point, REAL *normal)
     a = shape_normal (shape->left, point, l);
     b = shape_normal (shape->right, point, r);
     v = MIN (a, b);
-#if 0
-    sq = sqrt (a*a + b*b);
-    a = (1.0 - a / sq);
-    b = (1.0 - b / sq);
-    normal [0] = a*l[0] + b*r[0];
-    normal [1] = a*l[1] + b*r[1];
-    normal [2] = a*l[2] + b*r[2];
-#else
     if (a < b) { COPY (l, normal); }
     else { COPY (r, normal); }
-#endif
     break;
   case MUL:
     a = shape_normal (shape->left, point, l);
     b = shape_normal (shape->right, point, r);
     v = MAX (a, b);
-#if 0
-    sq = sqrt (a*a + b*b);
-    a = (1.0 + a / sq);
-    b = (1.0 + b / sq);
-    normal [0] = a*l[0] + b*r[0];
-    normal [1] = a*l[1] + b*r[1];
-    normal [2] = a*l[2] + b*r[2];
-#else
     if (a > b) { COPY (l, normal); }
     else { COPY (r, normal); }
-#endif
     break;
   case SUB:
     a = shape_normal (shape->left, point, l);
     b = -shape_normal (shape->right, point, r);
     v = MAX (a, b);
-#if 0
-    sq = sqrt (a*a + b*b);
-    a = (1.0 + a / sq);
-    b = (1.0 + b / sq);
-    normal [0] = a*l[0] - b*r[0];
-    normal [1] = a*l[1] - b*r[1];
-    normal [2] = a*l[2] - b*r[2];
-#else
     if (a > b) { COPY (l, normal); }
     else { MUL (r, -1, normal); }
-#endif
     break;
   case HPL:
     halfplane = shape->data;

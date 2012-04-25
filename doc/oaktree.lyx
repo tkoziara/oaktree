@@ -763,7 +763,7 @@ Rotate shape about an axis.
 \end_layout
 
 \begin_layout Subsection*
-MOVE (shape, point, vector, angle)
+ROTATE (shape, point, vector, angle)
 \end_layout
 
 \begin_layout Itemize

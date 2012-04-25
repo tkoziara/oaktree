@@ -55,6 +55,9 @@ struct shape* shape_combine (struct shape *left, short what, struct shape *right
 /* output unique shape leaves overlapping (c,r) sphere and return their count */
 int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves);
 
+/* move shape */
+void shape_move (struct shape *shape, REAL *vector);
+
 /* rotate shape about a point using a rotation matrix */
 void shape_rotate (struct shape *shape, REAL *point, REAL *matrix);
 
@@ -69,7 +72,7 @@ void shape_destroy (struct shape *shape);
 
 struct triang
 {
-  REAL (*t) [3][3];
+  REAL (*t) [4][3];
 
   short n;
 
