@@ -393,7 +393,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     ERRMEM (h = malloc (sizeof (struct halfplane)));
     VECTOR (h->p, p[0], p[1]+0.5*v, p[2]+0.5*w);
     VECTOR (h->n, -1, 0, 0);
-    h->r = ALG_SQR2 * MAX (v, w);
+    h->r = ALG_SQR2 * MAX (v, w) / 2.;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
     a->what = HPL;
@@ -404,7 +404,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     ERRMEM (h = malloc (sizeof (struct halfplane)));
     VECTOR (h->p, p[0]+0.5*u, p[1], p[2]+0.5*w);
     VECTOR (h->n, 0, -1, 0);
-    h->r = ALG_SQR2 * MAX (u, w);
+    h->r = ALG_SQR2 * MAX (u, w) / 2.;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
     b->what = HPL;
@@ -415,7 +415,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     ERRMEM (h = malloc (sizeof (struct halfplane)));
     VECTOR (h->p, p[0]+0.5*u, p[1]+0.5*v, p[2]);
     VECTOR (h->n, 0, 0, -1);
-    h->r = ALG_SQR2 * MAX (u, v);
+    h->r = ALG_SQR2 * MAX (u, v) / 2.;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
     c->what = HPL;
@@ -426,7 +426,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     ERRMEM (h = malloc (sizeof (struct halfplane)));
     VECTOR (h->p, p[0]+u, p[1]+0.5*v, p[2]+0.5*w);
     VECTOR (h->n, 1, 0, 0);
-    h->r = ALG_SQR2 * MAX (v, w);
+    h->r = ALG_SQR2 * MAX (v, w) / 2.;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 3));
     d->what = HPL;
@@ -437,7 +437,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     ERRMEM (h = malloc (sizeof (struct halfplane)));
     VECTOR (h->p, p[0]+0.5*u, p[1]+v, p[2]+0.5*w);
     VECTOR (h->n, 0, 1, 0);
-    h->r = ALG_SQR2 * MAX (u, w);
+    h->r = ALG_SQR2 * MAX (u, w) / 2.;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 4));
     e->what = HPL;
@@ -449,7 +449,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->p, p[0], p[1], p[2]+w);
     VECTOR (h->p, p[0]+0.5*u, p[1]+0.5*v, p[2]+w);
     VECTOR (h->n, 0, 0, 1);
-    h->r = ALG_SQR2 * MAX (u, v);
+    h->r = ALG_SQR2 * MAX (u, v) / 2.;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 5));
     f->what = HPL;
