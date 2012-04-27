@@ -83,7 +83,7 @@ static int shape_leaves_count (struct shape *shape)
   return 0;
 }
 
-/* return shape leaves with counter */
+/* output shape leaves overlapping (c,r) sphere and return their count */
 static void shape_leaves_with_counter (struct shape *shape, REAL c [3], REAL r, struct shape **leaves, int *i)
 {
   struct halfplane *halfplane;
@@ -269,12 +269,16 @@ struct shape* shape_combine (struct shape *left, short what, struct shape *right
 /* output unique shape leaves overlapping (c,r) sphere and return their count */
 int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves)
 {
-  int i = 0, j, k, n;
   struct shape **leaf;
+  int i, j, k, n;
+
+  if (shape_evaluate (shape, c) > r) return 0; /* outward distance filter */
 
   n = shape_leaves_count (shape);
 
   ERRMEM ((*leaves) = leaf = malloc (n * sizeof (struct shape*)));
+
+  i = 0;
 
   shape_leaves_with_counter (shape, c, r, leaf, &i);
 
@@ -413,12 +417,9 @@ REAL shape_evaluate (struct shape *shape, REAL *point)
     break;
   case CYL:
     cylinder = shape->data;
-    a = DOT (cylinder->d, cylinder->d);
     SUB (point, cylinder->p, z);
-    b = DOT (z, cylinder->d);
-    v = b / a;
-    ADDMUL (cylinder->p, v, cylinder->d, z);
-    SUB (point, z, z);
+    a = DOT (z, cylinder->d);
+    SUBMUL (z, a, cylinder->d, z);
     b = LEN (z);
     a = cylinder->r;
     if (b < a) b = 0.5*((b*b)/a + a); /* smooth out inside with y = x**2/(2r) + r/2 */
@@ -475,15 +476,14 @@ REAL shape_normal (struct shape *shape, REAL *point, REAL *normal)
     break;
   case CYL:
     cylinder = shape->data;
-    a = DOT (cylinder->d, cylinder->d);
     SUB (point, cylinder->p, z);
-    b = DOT (z, cylinder->d);
-    v = b / a;
-    ADDMUL (cylinder->p, v, cylinder->d, z);
-    SUB (point, z, z);
-    sq = LEN (z);
-    v = sq - cylinder->r;
-    DIV (z, sq, normal);
+    a = DOT (z, cylinder->d);
+    SUBMUL (z, a, cylinder->d, z);
+    b = LEN (z);
+    DIV (z, b, normal);
+    a = cylinder->r;
+    if (b < a) b = 0.5*((b*b)/a + a); /* smooth out inside with y = x**2/(2r) + r/2 */
+    v = b - a;
     break;
   }
 

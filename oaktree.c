@@ -10,6 +10,7 @@
 #include "viewer.h"
 #include "render.h"
 #include "input.h"
+#include "timer.h"
 #include "error.h"
 #include "alg.h"
 
@@ -93,6 +94,11 @@ static void passive (int x, int y)
 /* run analysis */
 static void runanalysis ()
 {
+  struct timing t;
+  double dt;
+
+  timerstart (&t);
+
   if (simulation)
   {
     simulation->octree = octree_create (simulation->extents, simulation->grid);
@@ -100,6 +106,10 @@ static void runanalysis ()
     for (struct shape *shape = simulation->solids; shape; shape = shape->next)
       octree_insert_shape (simulation->octree, shape, simulation->cutoff);
   }
+
+  dt = timerend (&t);
+
+  printf ("Took %g s.\n", dt);
 }
 
 /* return input file path and parse arguments */

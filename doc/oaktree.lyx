@@ -583,6 +583,76 @@ scolor
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
+name "sub:POLYGON"
+
+\end_inset
+
+POLYGON
+\end_layout
+
+\begin_layout Standard
+A shape extruded from a polygon.
+\end_layout
+
+\begin_layout Subsection*
+obj = POLYGON (polygon, h, vcolor, scolor)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+polygon
+\series default
+ - list 
+\begin_inset Formula $\left[\left(x_{1},y_{1}\right),\left(x_{2},y_{2}\right),...,\left(x_{n},y_{n}\right)\right]$
+\end_inset
+
+ of vertices defining closed polygon
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+h
+\series default
+ - height along 
+\begin_inset Formula $z$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+vcolor
+\series default
+ - integer volume color
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor
+\series default
+ - integer tuple 
+\begin_inset Formula $\left(s_{base},s_{1},s_{2},...,s_{n},s_{top}\right)$
+\end_inset
+
+ of surface colors
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
 name "sub:UNION"
 
 \end_inset

@@ -75,7 +75,7 @@ obj/octree.o: octree.c oaktree.h polygon.h error.h alg.h
 obj/shape.o: shape.c oaktree.h error.h alg.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-obj/oaktree.o: oaktree.c oaktree.h viewer.h render.h input.h error.h alg.h
+obj/oaktree.o: oaktree.c oaktree.h viewer.h render.h input.h timer.h error.h alg.h
 	$(CC) $(CFLAGS) $(OPENGL) -c -o $@ $<
 
 # MPI

@@ -94,10 +94,10 @@ struct octree
 struct octree* octree_create (REAL extents [6], REAL cutoff);
 
 /* insert shape and refine octree down to a cutoff edge length */
-void octree_insert_shape (struct octree *oct, struct shape *shape, REAL cutoff);
+void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutoff);
 
 /* free octree memory */
-void octree_destroy (struct octree *oct);
+void octree_destroy (struct octree *octree);
 
 struct simulation
 {
