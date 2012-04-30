@@ -106,8 +106,13 @@ static void shape_leaves_with_counter (struct shape *shape, REAL c [3], REAL r, 
 
     if (DOT (d, d) <= d[3]*d[3])
     {
-      leaves [*i] = shape;
-      (*i) ++;
+      d [3] = DOT (halfplane->n, d);
+
+      if (fabs (d[3]) <= r)
+      {
+	leaves [*i] = shape;
+	(*i) ++;
+      }
     }
     break;
   case SPH:
@@ -123,8 +128,9 @@ static void shape_leaves_with_counter (struct shape *shape, REAL c [3], REAL r, 
     break;
   case CYL:
     cylinder = shape->data;
+    d [3] = shape_evaluate (shape, c);
 
-    if (shape_evaluate (shape, c) <= r)
+    if (fabs (d[3]) <= r)
     {
       leaves [*i] = shape;
       (*i) ++;
@@ -271,8 +277,11 @@ int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape *
 {
   struct shape **leaf;
   int i, j, k, n;
+  REAL v;
+ 
+  v = shape_evaluate (shape, c);
 
-  if (shape_evaluate (shape, c) > r) return 0; /* outward distance filter */
+  if (fabs (v) > r) return 0; /* inward/outward distance filter */
 
   n = shape_leaves_count (shape);
 

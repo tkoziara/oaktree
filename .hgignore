@@ -1,0 +1,5 @@
+syntax:glob
+obj/*
+./oaktree
+./oaktree-mpi
+./*.swp
