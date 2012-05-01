@@ -140,7 +140,7 @@ SIMULATION object stores data specific to one distinct analysis.
 \end_layout
 
 \begin_layout Subsection*
-obj = SIMULATION (outpath, duration, step, grid, cutoff, extents)
+obj = SIMULATION (outpath, duration, step, cutoff, extents)
 \end_layout
 
 \begin_layout Itemize
@@ -173,14 +173,6 @@ duration
 step
 \series default
  - time step
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-grid
-\series default
- - regular size of octree grid
 \end_layout
 
 \begin_layout Itemize
@@ -580,6 +572,10 @@ scolor
  of surface colors
 \end_layout
 
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
@@ -590,7 +586,7 @@ name "sub:POLYGON"
 POLYGON
 \end_layout
 
-\begin_layout Standard
+\begin_layout Plain Layout
 A shape extruded from a polygon.
 \end_layout
 
@@ -648,6 +644,11 @@ scolor
 \end_inset
 
  of surface colors
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section

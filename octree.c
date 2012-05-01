@@ -37,7 +37,7 @@ inline static void zeropoint (REAL a [3], REAL b [3], REAL u, REAL v, REAL z [3]
 /* split triangle */
 static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k, struct shape *shape, REAL cutoff, REAL (**out) [4][3], int *m, int *size)
 {
-  REAL d [3], s [3][3][3];
+  REAL s [3][3][3], d [3], n [3], v;
   int i, j;
 
   if (k == 0)
@@ -50,53 +50,26 @@ static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k,
 
     MID3 (t[0], t[1], t[2], d);
 
-    short pass = 0;
+    NORMAL (t[0], t[1], t[2], n);
 
-    REAL n0 [3], n1 [3], v0 = shape_normal (shape, d, n0);
+    NORMALIZE (n);
 
-    if (src->what == HPL)
+    /* difference of coincident surfaces will produce zero-measure zero-isosets */
+    /* we try to eliminate those by perturbing the mid-point towards the insidide */
+
+    if (src->what == HPL) cutoff *= 0.1; /* stricter test for flat surfaces */
+    else cutoff *= ALG_SQR2; /* relaxed test for curved surfaces (cutoff**3 cube has sqrt(2)*cutoff diameter) */
+
+    SUBMUL (d, cutoff, n, d);
+
+    v = shape_evaluate (shape, d);
+
+    if (v < 0.0 && fabs (cutoff + v) < cutoff) /* inside but not too deep */
     {
-      pass = (fabs (v0) <= 0.1*cutoff); /* mid-point and stringent tolerance for planar pieces */
-    }
-    else /* vertex points and relaxed tolerance for curved pieces */
-    {
-      REAL v[3] = {shape_evaluate (shape, t[0]),
-	           shape_evaluate (shape, t[1]),
-		   shape_evaluate (shape, t[2])};
-
-      cutoff *= ALG_SQR2; /* XXX */
-
-      pass = (fabs (v[0]) <= cutoff &&
-	      fabs (v[1]) <= cutoff &&
-	      fabs (v[2]) <= cutoff);
-    }
-
-    if (pass) /* difference of coincident surfaces will produce zero-measure zero-isosets */
-    {         /* we try to eliminate those by perturbing the mid-point towards the insidide */
-      ADDMUL (d, -cutoff, n0, d);
-      v0 = shape_evaluate (shape, d);
-      pass = (v0 < 0.0);
-    }
-
-    if (pass)
-    {
-      NORMAL (t[0], t[1], t[2], n1);
-
-      if (DOT (n0, n1) > 0.0)
-      {
-	COPY (t[0], (*out) [*m][0]);
-	COPY (t[1], (*out) [*m][1]);
-	COPY (t[2], (*out) [*m][2]);
-      }
-      else
-      {
-	COPY (t[2], (*out) [*m][0]);
-	COPY (t[1], (*out) [*m][1]);
-	COPY (t[0], (*out) [*m][2]);
-      }
-
-      COPY (n0, (*out) [*m][3]);
-
+      COPY (t[0], (*out) [*m][0]);
+      COPY (t[1], (*out) [*m][1]);
+      COPY (t[2], (*out) [*m][2]);
+      COPY (n, (*out) [*m][3]);
       (*m) ++;
     }
   }
@@ -226,62 +199,14 @@ done:
 }
 
 /* create octree down to a cutoff edge length */
-struct octree* octree_create (REAL extents [6], REAL cutoff)
+struct octree* octree_create (REAL extents [6])
 {
-  REAL  d [3], e [6];
   struct octree *octree;
 
   ERRMEM (octree = calloc (1, sizeof (struct octree)));
 
   COPY6 (extents, octree->extents);
 
-  SUB (extents+3, extents, d);
-
-  if (d [0] > cutoff || d [1] > cutoff || d [2] > cutoff)
-  {
-    SCALE (d, 0.5);
-
-    VECTOR (e, extents[0], extents[1], extents[2]);
-    VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
-    octree->down [0] = octree_create (e, cutoff);
-    octree->down [0]->up = octree;
-
-    VECTOR (e, extents[0], extents[1]+d[1], extents[2]);
-    VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
-    octree->down [1] = octree_create (e, cutoff);
-    octree->down [1]->up = octree;
-
-    VECTOR (e, extents[0]+d[0], extents[1]+d[1], extents[2]);
-    VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
-    octree->down [2] = octree_create (e, cutoff);
-    octree->down [2]->up = octree;
-
-    VECTOR (e, extents[0]+d[0], extents[1], extents[2]);
-    VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
-    octree->down [3] = octree_create (e, cutoff);
-    octree->down [3]->up = octree;
-
-    VECTOR (e, extents[0], extents[1], extents[2]+d[2]);
-    VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
-    octree->down [4] = octree_create (e, cutoff);
-    octree->down [4]->up = octree;
-
-    VECTOR (e, extents[0], extents[1]+d[1], extents[2]+d[2]);
-    VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
-    octree->down [5] = octree_create (e, cutoff);
-    octree->down [5]->up = octree;
-
-    VECTOR (e, extents[0]+d[0], extents[1]+d[1], extents[2]+d[2]);
-    VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
-    octree->down [6] = octree_create (e, cutoff);
-    octree->down [6]->up = octree;
-
-    VECTOR (e, extents[0]+d[0], extents[1], extents[2]+d[2]);
-    VECTOR (e+3, e[0]+d[0], e[1]+d[1], e[2]+d[2]);
-    octree->down [7] = octree_create (e, cutoff);
-    octree->down [7]->up = octree;
-  }
-      
   return octree;
 }
 
@@ -405,42 +330,42 @@ void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutof
 
       VECTOR (x, p[0][0], p[0][1], p[0][2]);
       VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
-      octree->down [0] = octree_create (x, FLT_MAX);
+      octree->down [0] = octree_create (x);
       octree->down [0]->up = octree;
 
       VECTOR (x, p[0][0], p[0][1]+q[1][1], p[0][2]);
       VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
-      octree->down [1] = octree_create (x, FLT_MAX);
+      octree->down [1] = octree_create (x);
       octree->down [1]->up = octree;
 
       VECTOR (x, p[0][0]+q[1][0], p[0][1]+q[1][1], p[0][2]);
       VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
-      octree->down [2] = octree_create (x, FLT_MAX);
+      octree->down [2] = octree_create (x);
       octree->down [2]->up = octree;
 
       VECTOR (x, p[0][0]+q[1][0], p[0][1], p[0][2]);
       VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
-      octree->down [3] = octree_create (x, FLT_MAX);
+      octree->down [3] = octree_create (x);
       octree->down [3]->up = octree;
 
       VECTOR (x, p[0][0], p[0][1], p[0][2]+q[1][2]);
       VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
-      octree->down [4] = octree_create (x, FLT_MAX);
+      octree->down [4] = octree_create (x);
       octree->down [4]->up = octree;
 
       VECTOR (x, p[0][0], p[0][1]+q[1][1], p[0][2]+q[1][2]);
       VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
-      octree->down [5] = octree_create (x, FLT_MAX);
+      octree->down [5] = octree_create (x);
       octree->down [5]->up = octree;
 
       VECTOR (x, p[0][0]+q[1][0], p[0][1]+q[1][1], p[0][2]+q[1][2]);
       VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
-      octree->down [6] = octree_create (x, FLT_MAX);
+      octree->down [6] = octree_create (x);
       octree->down [6]->up = octree;
 
       VECTOR (x, p[0][0]+q[1][0], p[0][1], p[0][2]+q[1][2]);
       VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
-      octree->down [7] = octree_create (x, FLT_MAX);
+      octree->down [7] = octree_create (x);
       octree->down [7]->up = octree;
     }
 

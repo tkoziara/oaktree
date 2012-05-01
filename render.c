@@ -15,14 +15,14 @@
 #include "alg.h"
 
 /* render octree itself */
-void render_octree (struct octree *oct)
+void render_octree (struct octree *octree)
 {
   REAL *e;
   int i;
 
-  if (oct->down [0])
+  if (octree->down [0])
   {
-    for (i = 0; i < 8; i ++) render_octree (oct->down [i]);
+    for (i = 0; i < 8; i ++) render_octree (octree->down [i]);
   }
   else
   {
@@ -30,7 +30,7 @@ void render_octree (struct octree *oct)
 
     glColor3f (0.2, 0.2, 0.2);
 
-    e = oct->extents;
+    e = octree->extents;
 
     /* lower base */
     glVertex3f (e[0], e[1], e[2]);
@@ -76,21 +76,21 @@ void render_octree (struct octree *oct)
 }
 
 /* render shapes */
-void render_shapes (struct octree *oct, REAL cutoff)
+void render_shapes (struct octree *octree, REAL cutoff)
 {
   struct triang *triang;
   int i;
 
-  if (oct->down [0])
+  if (octree->down [0])
   {
-    for (i = 0; i < 8; i ++) render_shapes (oct->down [i], cutoff);
+    for (i = 0; i < 8; i ++) render_shapes (octree->down [i], cutoff);
   }
 
   glBegin (GL_TRIANGLES);
 
   glColor3f (0.5, 0.5, 0.5);
 
-  for (triang = oct->triang; triang; triang = triang->next)
+  for (triang = octree->triang; triang; triang = triang->next)
   {
     REAL (*t) [4][3] = triang->t;
 

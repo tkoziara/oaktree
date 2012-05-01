@@ -8,21 +8,21 @@
 
 struct halfplane
 {
-  REAL p [3], n [3], r;
+  REAL p [3], n [3], r, s;
 
   short vcolor, scolor;
 };
 
 struct sphere
 {
-  REAL c [3], r;
+  REAL c [3], r, s;
 
   short vcolor, scolor;
 };
 
 struct cylinder
 {
-  REAL p [3], d [3], r;
+  REAL p [3], d [3], r, s;
 
   short vcolor, scolor;
 };
@@ -35,25 +35,21 @@ struct  warp /* deformation as a space warp */
 
 struct shape
 {
-  enum {ADD, MUL, SUB, HPL, SPH, CYL} what;
+  enum {ADD, MUL, HPL, SPH, CYL} what;
 
   void *data;
 
-  char *label;
-
   struct shape *left, *right;
-
-  struct shape *prev, *next;
 };
 
-/* copy and label shape */
-struct shape* shape_copy (struct shape *shape, char *label);
+/* copy shape */
+struct shape* shape_copy (struct shape *shape);
+
+/* return the same inverted shape */
+struct shape* shape_invert (struct shape *shape);
 
 /* combine two shapes */
 struct shape* shape_combine (struct shape *left, short what, struct shape *right);
-
-/* output unique shape leaves overlapping (c,r) sphere and return their count */
-int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves);
 
 /* move shape */
 void shape_move (struct shape *shape, REAL *vector);
@@ -66,6 +62,9 @@ REAL shape_evaluate (struct shape *shape, REAL *point);
 
 /* return value and compute shape normal at given point */
 REAL shape_normal (struct shape *shape, REAL *point, REAL *normal);
+
+/* output unique shape leaves overlapping (c,r) sphere and return their count */
+int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves);
 
 /* free shape memory */
 void shape_destroy (struct shape *shape);
@@ -90,8 +89,8 @@ struct octree
   struct octree *up, *down [8];
 };
 
-/* create octree down to a cutoff edge length */
-struct octree* octree_create (REAL extents [6], REAL cutoff);
+/* create octree */
+struct octree* octree_create (REAL extents [6]);
 
 /* insert shape and refine octree down to a cutoff edge length */
 void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutoff);
@@ -99,17 +98,26 @@ void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutof
 /* free octree memory */
 void octree_destroy (struct octree *octree);
 
+struct solid
+{
+  struct shape *shape;
+
+  char *label;
+
+  struct solid *prev, *next;
+};
+
 struct simulation
 {
   char *outpath;
 
   REAL duration, step;
 
-  REAL grid, cutoff;
+  REAL cutoff;
 
   REAL extents [6];
 
-  struct shape *solids;
+  struct solid *solid;
 
   struct octree *octree;
 

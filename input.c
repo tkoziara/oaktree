@@ -145,8 +145,8 @@ static int is_simulation (SIMULATION *obj, char *var)
 /* constructor */
 static PyObject* SIMULATION_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-  KEYWORDS ("outpath", "duration", "step", "grid", "cutoff", "extents");
-  double duration, step, grid, cutoff;
+  KEYWORDS ("outpath", "duration", "step", "cutoff", "extents");
+  double duration, step, cutoff;
   PyObject *outpath, *extents;
   struct simulation *simu;
   SIMULATION *self;
@@ -155,18 +155,16 @@ static PyObject* SIMULATION_new (PyTypeObject *type, PyObject *args, PyObject *k
 
   if (self)
   {
-    PARSEKEYS ("OddddO", &outpath, &duration, &step, &grid, &cutoff, &extents);
+    PARSEKEYS ("OdddO", &outpath, &duration, &step, &cutoff, &extents);
 
     TYPETEST (is_string (outpath, kwl [0]) && is_positive (duration, kwl[1]) &&
-	      is_positive (step, kwl[2]) && is_positive (grid, kwl[3]) &&
-	      is_positive (cutoff, kwl[4]) && is_tuple (extents, kwl[5], 6));
+	      is_positive (step, kwl[2]) && is_positive (cutoff, kwl[4]) && is_tuple (extents, kwl[5], 6));
 
     ERRMEM (simu = calloc (1, sizeof (struct simulation)));
     ERRMEM (simu->outpath = malloc (strlen (PyString_AsString (outpath)) + 1));
     strcpy (simu->outpath, PyString_AsString (outpath));
     simu->duration = duration;
     simu->step = step;
-    simu->grid = grid;
     simu->cutoff = cutoff;
     simu->extents [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 0));
     simu->extents [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 1));
@@ -287,6 +285,7 @@ static PyObject* SPHERE (PyObject *self, PyObject *args, PyObject *kwds)
     sphere->c [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 1));
     sphere->c [2] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (center, 2));
     sphere->r = r;
+    sphere->s = 1.0;
     sphere->vcolor = vcolor;
     sphere->scolor = scolor;
 
@@ -328,6 +327,7 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
     a->vcolor = vcolor;
     a->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
     a->r = r;
+    a->s = 1.0;
     sa->what = HPL;
     sa->data = a;
 
@@ -339,6 +339,7 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
     b->vcolor = vcolor;
     b->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
     b->r = r;
+    b->s = 1.0;
     sb->what = HPL;
     sb->data = b;
 
@@ -348,6 +349,7 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
     COPY (a->p, c->p);
     VECTOR (c->d, 0, 0, 1);
     c->r = r;
+    c->s = 1.0;
     c->vcolor = vcolor;
     c->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
     MID (a->p, b->p, x);
@@ -394,6 +396,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->p, p[0], p[1]+0.5*v, p[2]+0.5*w);
     VECTOR (h->n, -1, 0, 0);
     h->r = ALG_SQR2 * MAX (v, w) / 2.;
+    h->s = 1.0;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
     a->what = HPL;
@@ -405,6 +408,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->p, p[0]+0.5*u, p[1], p[2]+0.5*w);
     VECTOR (h->n, 0, -1, 0);
     h->r = ALG_SQR2 * MAX (u, w) / 2.;
+    h->s = 1.0;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
     b->what = HPL;
@@ -416,6 +420,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->p, p[0]+0.5*u, p[1]+0.5*v, p[2]);
     VECTOR (h->n, 0, 0, -1);
     h->r = ALG_SQR2 * MAX (u, v) / 2.;
+    h->s = 1.0;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
     c->what = HPL;
@@ -427,6 +432,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->p, p[0]+u, p[1]+0.5*v, p[2]+0.5*w);
     VECTOR (h->n, 1, 0, 0);
     h->r = ALG_SQR2 * MAX (v, w) / 2.;
+    h->s = 1.0;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 3));
     d->what = HPL;
@@ -438,6 +444,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->p, p[0]+0.5*u, p[1]+v, p[2]+0.5*w);
     VECTOR (h->n, 0, 1, 0);
     h->r = ALG_SQR2 * MAX (u, w) / 2.;
+    h->s = 1.0;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 4));
     e->what = HPL;
@@ -450,6 +457,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->p, p[0]+0.5*u, p[1]+0.5*v, p[2]+w);
     VECTOR (h->n, 0, 0, 1);
     h->r = ALG_SQR2 * MAX (u, v) / 2.;
+    h->s = 1.0;
     h->vcolor = vcolor;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 5));
     f->what = HPL;
@@ -477,7 +485,7 @@ static PyObject* UNION (PyObject *self, PyObject *args, PyObject *kwds)
 
     TYPETEST (is_shape (shape1, kwl[0]) && is_shape (shape2, kwl[1]));
 
-    out->ptr = shape_combine (shape_copy (shape1->ptr, NULL), ADD, shape_copy (shape2->ptr, NULL));
+    out->ptr = shape_combine (shape_copy (shape1->ptr), ADD, shape_copy (shape2->ptr));
   }
 
   return (PyObject*)out;
@@ -497,7 +505,7 @@ static PyObject* INTERSECTION (PyObject *self, PyObject *args, PyObject *kwds)
 
     TYPETEST (is_shape (shape1, kwl[0]) && is_shape (shape2, kwl[1]));
 
-    out->ptr = shape_combine (shape_copy (shape1->ptr, NULL), MUL, shape_copy (shape2->ptr, NULL));
+    out->ptr = shape_combine (shape_copy (shape1->ptr), MUL, shape_copy (shape2->ptr));
   }
 
   return (PyObject*)out;
@@ -517,7 +525,7 @@ static PyObject* DIFFERENCE (PyObject *self, PyObject *args, PyObject *kwds)
 
     TYPETEST (is_shape (shape1, kwl[0]) && is_shape (shape2, kwl[1]));
 
-    out->ptr = shape_combine (shape_copy (shape1->ptr, NULL), SUB, shape_copy (shape2->ptr, NULL));
+    out->ptr = shape_combine (shape_copy (shape1->ptr), MUL, shape_invert (shape_copy (shape2->ptr)));
   }
 
   return (PyObject*)out;
@@ -584,7 +592,7 @@ static PyObject* ROTATE (PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject* SOLID (PyObject *self, PyObject *args, PyObject *kwds)
 {
   KEYWORDS ("simu", "shape", "label");
-  struct shape *copy;
+  struct solid *solid;
   SIMULATION *simu;
   PyObject *label;
   SHAPE *shape;
@@ -593,12 +601,15 @@ static PyObject* SOLID (PyObject *self, PyObject *args, PyObject *kwds)
 
   TYPETEST (is_simulation (simu, kwl[0]) && is_shape (shape, kwl[1]) && is_string (label, kwl[2]));
 
-  copy = shape_copy (shape->ptr, PyString_AsString (label));
+  ERRMEM (solid = malloc (sizeof (struct solid)));
+  solid->shape = shape_copy (shape->ptr);
+  ERRMEM (solid->label = malloc (strlen (PyString_AsString (label)) + 1));
+  strcpy (solid->label, PyString_AsString (label));
 
-  if (simu->ptr->solids)
-    simu->ptr->solids->prev = copy;
-  copy->next = simu->ptr->solids;
-  simu->ptr->solids = copy; /* insert copy into list of solids */
+  if (simu->ptr->solid) simu->ptr->solid->prev = solid;
+  solid->next = simu->ptr->solid;
+  simu->ptr->solid = solid;
+  solid->prev = NULL;
 
   Py_RETURN_NONE;
 }

@@ -1,5 +1,19 @@
+Needed:
+#######
+
+Adaptive initial octree refinement for many solids (e.g. with flat faces only); Use points sampled from solids
+and insert them initially into the octree; This will create the initial structure; Something like
+
+octree_insert_points (octree, points, pointspercell)
+
+will do (and will also be useful for fluid).
+
+The tree cells should be marker either us search cells or as insert cells; The current insert_shape routine
+should start working down from insert cells; The unique shape leaves routine shoud distinguish between outside
+and inside a cell (now this is combined); Then we should stop recursion or proceed down the tree accordingly;
+
 Consider:
----------
+#########
 
 Consistent Particle Method by Koh et al. for fluids
 

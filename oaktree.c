@@ -34,10 +34,10 @@ static void init ()
 {
   if (simulation)
   {
-    simulation->octree = octree_create (simulation->extents, simulation->grid);
+    simulation->octree = octree_create (simulation->extents);
 
-    for (struct shape *shape = simulation->solids; shape; shape = shape->next)
-      octree_insert_shape (simulation->octree, shape, simulation->cutoff);
+    for (struct solid *solid = simulation->solid; solid; solid = solid->next)
+      octree_insert_shape (simulation->octree, solid->shape, simulation->cutoff);
 
     viewer_update_extents (simulation->extents);
   }
@@ -101,10 +101,10 @@ static void runanalysis ()
 
   if (simulation)
   {
-    simulation->octree = octree_create (simulation->extents, simulation->grid);
+    simulation->octree = octree_create (simulation->extents);
 
-    for (struct shape *shape = simulation->solids; shape; shape = shape->next)
-      octree_insert_shape (simulation->octree, shape, simulation->cutoff);
+    for (struct solid *solid = simulation->solid; solid; solid = solid->next)
+      octree_insert_shape (simulation->octree, solid->shape, simulation->cutoff);
   }
 
   dt = timerend (&t);

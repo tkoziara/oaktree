@@ -11,58 +11,6 @@
 #include "error.h"
 #include "alg.h"
 
-/* recursive copy */
-static struct shape* recursive_copy (struct shape *shape)
-{
-  struct shape *copy;
-
-  ERRMEM (copy = calloc (1, sizeof (struct shape)));
-
-  copy->what = shape->what;
-
-  switch (shape->what)
-  {
-  case ADD:
-  case MUL:
-  case SUB:
-    copy->left = recursive_copy (shape->left);
-    copy->right = recursive_copy (shape->right);
-    break;
-  case HPL:
-    {
-      struct halfplane *data;
-
-      ERRMEM (data = malloc (sizeof (struct halfplane)));
-
-      memcpy (data, shape->data, sizeof (struct halfplane));
-      copy->data = data;
-    }
-    break;
-  case SPH:
-    {
-      struct sphere *data;
-
-      ERRMEM (data = malloc (sizeof (struct sphere)));
-
-      memcpy (data, shape->data, sizeof (struct sphere));
-      copy->data = data;
-    }
-    break;
-  case CYL:
-    {
-      struct cylinder *data;
-
-      ERRMEM (data = malloc (sizeof (struct cylinder)));
-
-      memcpy (data, shape->data, sizeof (struct cylinder));
-      copy->data = data;
-    }
-    break;
-  }
-
-  return copy;
-}
-
 /* count shape leaves */
 static int shape_leaves_count (struct shape *shape)
 {
@@ -70,7 +18,6 @@ static int shape_leaves_count (struct shape *shape)
   {
   case ADD:
   case MUL:
-  case SUB:
     return shape_leaves_count (shape->left) + shape_leaves_count (shape->right);
     break;
   case HPL:
@@ -95,7 +42,6 @@ static void shape_leaves_with_counter (struct shape *shape, REAL c [3], REAL r, 
   {
   case ADD:
   case MUL:
-  case SUB:
     shape_leaves_with_counter (shape->left, c, r, leaves, i);
     shape_leaves_with_counter (shape->right, c, r, leaves, i);
     break;
@@ -241,21 +187,98 @@ int compare_leaves (struct shape **ll, struct shape **rr)
   return 0;
 }
 
-/* copy and label shape */
-struct shape* shape_copy (struct shape *shape, char *label)
+/* copy shape */
+struct shape* shape_copy (struct shape *shape)
 {
   struct shape *copy;
 
-  copy = recursive_copy (shape);
+  ERRMEM (copy = calloc (1, sizeof (struct shape)));
 
-  if (label)
+  copy->what = shape->what;
+
+  switch (shape->what)
   {
-    ERRMEM (copy->label = malloc (strlen (label) + 1));
+  case ADD:
+  case MUL:
+    copy->left = shape_copy (shape->left);
+    copy->right = shape_copy (shape->right);
+    break;
+  case HPL:
+    {
+      struct halfplane *data;
 
-    strcpy (copy->label, label);
+      ERRMEM (data = malloc (sizeof (struct halfplane)));
+
+      memcpy (data, shape->data, sizeof (struct halfplane));
+      copy->data = data;
+    }
+    break;
+  case SPH:
+    {
+      struct sphere *data;
+
+      ERRMEM (data = malloc (sizeof (struct sphere)));
+
+      memcpy (data, shape->data, sizeof (struct sphere));
+      copy->data = data;
+    }
+    break;
+  case CYL:
+    {
+      struct cylinder *data;
+
+      ERRMEM (data = malloc (sizeof (struct cylinder)));
+
+      memcpy (data, shape->data, sizeof (struct cylinder));
+      copy->data = data;
+    }
+    break;
   }
 
   return copy;
+}
+
+/* return the same inverted shape */
+struct shape* shape_invert (struct shape *shape)
+{
+  switch (shape->what)
+  {
+  case ADD:
+    shape->what = MUL;
+
+    shape_invert (shape->left);
+    shape_invert (shape->right);
+    break;
+  case MUL:
+    shape->what = ADD;
+
+    shape_invert (shape->left);
+    shape_invert (shape->right);
+    break;
+  case HPL:
+    {
+      struct halfplane *data = shape->data;
+
+      data->s *= -1.0;
+    }
+    break;
+  case SPH:
+    {
+      struct sphere *data = shape->data;
+
+      data->s *= -1.0;
+    }
+    break;
+  case CYL:
+    {
+      struct cylinder *data = shape->data;
+
+      data->s *= -1.0;
+    }
+    break;
+  }
+
+  return shape;
 }
 
 /* combine two shapes */
@@ -272,44 +295,6 @@ struct shape* shape_combine (struct shape *left, short what, struct shape *right
   return shape;
 }
 
-/* output unique shape leaves overlapping (c,r) sphere and return their count */
-int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves)
-{
-  struct shape **leaf;
-  int i, j, k, n;
-  REAL v;
- 
-  v = shape_evaluate (shape, c);
-
-  if (fabs (v) > r) return 0; /* inward/outward distance filter */
-
-  n = shape_leaves_count (shape);
-
-  ERRMEM ((*leaves) = leaf = malloc (n * sizeof (struct shape*)));
-
-  i = 0;
-
-  shape_leaves_with_counter (shape, c, r, leaf, &i);
-
-  if (i <= 1) return i;
-
-  qsort (leaf, i, sizeof (struct shape*), (int (*) (const void*, const void*)) compare_leaves);
-
-  for (j = 0, k = 1; k < i; )
-  {
-    while (k < i && compare_leaves (&leaf[j], &leaf[k]) == 0) k ++;
-
-    if (k < i)
-    {
-      leaf [j+1] = leaf [k];
-      j ++;
-      k ++;
-    }
-  }
-
-  return j+1;
-}
-
 /* move shape */
 void shape_move (struct shape *shape, REAL *vector)
 {
@@ -317,7 +302,6 @@ void shape_move (struct shape *shape, REAL *vector)
   {
   case ADD:
   case MUL:
-  case SUB:
     shape_move (shape->left, vector);
     shape_move (shape->right, vector);
     break;
@@ -354,7 +338,6 @@ void shape_rotate (struct shape *shape, REAL *point, REAL *matrix)
   {
   case ADD:
   case MUL:
-  case SUB:
     shape_rotate (shape->left, point, matrix);
     shape_rotate (shape->right, point, matrix);
     break;
@@ -409,20 +392,15 @@ REAL shape_evaluate (struct shape *shape, REAL *point)
     b = shape_evaluate (shape->right, point);
     v = MAX (a, b);
     break;
-  case SUB:
-    a = shape_evaluate (shape->left, point);
-    b = -shape_evaluate (shape->right, point);
-    v = MAX (a, b);
-    break;
   case HPL:
     halfplane = shape->data;
     SUB (point, halfplane->p, z);
-    v = DOT (z, halfplane->n);
+    v = halfplane->s * DOT (z, halfplane->n);
     break;
   case SPH:
     sphere = shape->data;
     SUB (point, sphere->c, z);
-    v = LEN (z) - sphere->r;
+    v = sphere->s * (LEN (z) - sphere->r);
     break;
   case CYL:
     cylinder = shape->data;
@@ -432,7 +410,7 @@ REAL shape_evaluate (struct shape *shape, REAL *point)
     b = LEN (z);
     a = cylinder->r;
     if (b < a) b = 0.5*((b*b)/a + a); /* smooth out inside with y = x**2/(2r) + r/2 */
-    v = b - a;
+    v = cylinder->s * (b - a);
     break;
   }
 
@@ -463,24 +441,18 @@ REAL shape_normal (struct shape *shape, REAL *point, REAL *normal)
     if (a > b) { COPY (l, normal); }
     else { COPY (r, normal); }
     break;
-  case SUB:
-    a = shape_normal (shape->left, point, l);
-    b = -shape_normal (shape->right, point, r);
-    v = MAX (a, b);
-    if (a > b) { COPY (l, normal); }
-    else { MUL (r, -1, normal); }
-    break;
   case HPL:
     halfplane = shape->data;
     SUB (point, halfplane->p, z);
-    v = DOT (z, halfplane->n);
-    COPY (halfplane->n, normal);
+    v = halfplane->s * DOT (z, halfplane->n);
+    MUL (halfplane->n, halfplane->s, normal);
     break;
   case SPH:
     sphere = shape->data;
     SUB (point, sphere->c, z);
     sq = LEN (z);
-    v = sq - sphere->r;
+    v = sphere->s * (sq - sphere->r);
+    sq *= sphere->s;
     DIV (z, sq, normal);
     break;
   case CYL:
@@ -489,14 +461,53 @@ REAL shape_normal (struct shape *shape, REAL *point, REAL *normal)
     a = DOT (z, cylinder->d);
     SUBMUL (z, a, cylinder->d, z);
     b = LEN (z);
-    DIV (z, b, normal);
+    sq = b * cylinder->s;
+    DIV (z, sq, normal);
     a = cylinder->r;
     if (b < a) b = 0.5*((b*b)/a + a); /* smooth out inside with y = x**2/(2r) + r/2 */
-    v = b - a;
+    v = cylinder->s * (b - a);
     break;
   }
 
   return v;
+}
+
+/* output unique shape leaves overlapping (c,r) sphere and return their count */
+int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves)
+{
+  struct shape **leaf;
+  int i, j, k, n;
+  REAL v;
+ 
+  v = shape_evaluate (shape, c);
+
+  if (fabs (v) > r) return 0; /* inward/outward distance filter */
+
+  n = shape_leaves_count (shape);
+
+  ERRMEM ((*leaves) = leaf = malloc (n * sizeof (struct shape*)));
+
+  i = 0;
+
+  shape_leaves_with_counter (shape, c, r, leaf, &i);
+
+  if (i <= 1) return i;
+
+  qsort (leaf, i, sizeof (struct shape*), (int (*) (const void*, const void*)) compare_leaves);
+
+  for (j = 0, k = 1; k < i; )
+  {
+    while (k < i && compare_leaves (&leaf[j], &leaf[k]) == 0) k ++;
+
+    if (k < i)
+    {
+      leaf [j+1] = leaf [k];
+      j ++;
+      k ++;
+    }
+  }
+
+  return j+1;
 }
 
 /* free shape memory */
@@ -506,7 +517,6 @@ void shape_destroy (struct shape *shape)
   {
   case ADD:
   case MUL:
-  case SUB:
     shape_destroy (shape->left);
     shape_destroy (shape->right);
     break;
@@ -516,8 +526,6 @@ void shape_destroy (struct shape *shape)
     free (shape->data);
     break;
   }
-
-  if (shape->label) free (shape->label);
 
   free (shape);
 }
