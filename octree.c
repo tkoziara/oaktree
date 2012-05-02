@@ -58,7 +58,7 @@ static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k,
     /* we try to eliminate those by perturbing the mid-point towards the insidide */
 
     if (src->what == HPL) cutoff *= 0.1; /* stricter test for flat surfaces */
-    else cutoff *= ALG_SQR2; /* relaxed test for curved surfaces (cutoff**3 cube has sqrt(2)*cutoff diameter) */
+    else cutoff *= ALG_SQR2; /* relaxed test for curved surfaces (cutoff**3 cube has sqrt(2)*cutoff diameter) XXX */
 
     SUBMUL (d, cutoff, n, d);
 
@@ -243,7 +243,7 @@ void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutof
   allaccurate = 1;
   triang = NULL;
 
-  for (i = 0; i < n; i ++)
+  for (l = i = 0; i < n; i ++)
   {
     for (j = 0; j < 8; j ++) d [i][j] = shape_evaluate (leaf[i], p[j]);
 
@@ -258,12 +258,17 @@ void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutof
       if (d [i][0] * d [i][j] <= 0.0) /* contains 0-isosurface */
       {
 	flagged [i] = 1;
+	l ++;
 	break;
       }
     }
   }
 
-  /* if allcaturate == 1 extract triangles */
+  /* recurse down the tree if too many leaves */
+
+  if (allaccurate && l > 8) allaccurate = 0; /* 8 is arbitrary XXX */
+
+  /* if all leaves are accorate extract triangles */
 
   if (allaccurate)
   {

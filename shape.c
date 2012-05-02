@@ -41,9 +41,38 @@ static void shape_leaves_with_counter (struct shape *shape, REAL c [3], REAL r, 
   switch (shape->what)
   {
   case ADD:
+
+    if (shape->left->what == MUL)
+    {
+      d [0] = shape_evaluate (shape->left, c);
+      if (fabs (d[0]) <= r) shape_leaves_with_counter (shape->left, c, r, leaves, i);
+    }
+    else shape_leaves_with_counter (shape->left, c, r, leaves, i);
+
+    if (shape->right->what == MUL)
+    {
+      d [0] = shape_evaluate (shape->right, c);
+      if (fabs (d[0]) <= r) shape_leaves_with_counter (shape->right, c, r, leaves, i);
+    }
+    else shape_leaves_with_counter (shape->right, c, r, leaves, i);
+
+    break;
   case MUL:
-    shape_leaves_with_counter (shape->left, c, r, leaves, i);
-    shape_leaves_with_counter (shape->right, c, r, leaves, i);
+
+    if (shape->left->what == ADD)
+    {
+      d [0] = shape_evaluate (shape->left, c);
+      if (fabs (d[0]) <= r) shape_leaves_with_counter (shape->left, c, r, leaves, i);
+    }
+    else shape_leaves_with_counter (shape->left, c, r, leaves, i);
+
+    if (shape->right->what == ADD)
+    {
+      d [0] = shape_evaluate (shape->right, c);
+      if (fabs (d[0]) <= r) shape_leaves_with_counter (shape->right, c, r, leaves, i);
+    }
+    else shape_leaves_with_counter (shape->right, c, r, leaves, i);
+
     break;
   case HPL:
     halfplane = shape->data;
@@ -111,7 +140,7 @@ int compare_leaves (struct shape **ll, struct shape **rr)
 	    v = -DOT (r->p, r->n);
 	    w = u - v; /* difference of values at (0, 0, 0) */
 
-	    if (fabs (w) < 1E-10) return 0; /* XXX and repeats below */
+	    if (fabs (w) < 1E-10) return 0; /* this and below are sensitive to user scale XXX */
 	  }
 	}
       }
