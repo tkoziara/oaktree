@@ -7,14 +7,14 @@ change: shape_combine () so that it packs the output shape into a single block o
 Consider:
 #########
 
-Consistent Particle Method by Koh et al. for fluids
+CPM by Koh et al. for fluids
 
 ---
 
-Material Point Method for solids?
+El-by-el octree FE + Kant + co-rot for solids
 
----
+or
 
-Fine solid method discretized eigenmodes later matched with small subset of Chebyshev polynomials
+El-by-el f-bar hex with 1 GP and cut-off volume
 
 ---

@@ -24,7 +24,7 @@ CFLAGS = -std=c99 $(DEBUG) $(PROFILE) $(REAL)
 LIB = -lm $(LAPACK) $(BLAS) $(GLLIB) $(PYTHONLIB)
 
 ifeq ($(MPI),yes)
-  LIBMPI = -lm $(LAPACK) $(BLAS) $(PYTHONLIB) $(ZOLTANLIB)
+  LIBMPI = -lm $(LAPACK) $(BLAS) $(PYTHONLIB)
 endif
 
 ifeq ($(MPI),yes)

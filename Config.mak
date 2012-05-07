@@ -56,10 +56,3 @@ VBO = yes
 
 MPI = yes
 MPICC = mpicc
-
-#
-# Zoltan (MPI == yes)
-#
-
-ZOLTANINC = -I/Users/tomek/Devel/lib/zoltan/include
-ZOLTANLIB = -L/Users/tomek/Devel/lib/zoltan/lib -lzoltan

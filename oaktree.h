@@ -27,12 +27,6 @@ struct cylinder
   short vcolor, scolor;
 };
 
-#if 0
-struct  warp /* deformation as a space warp */
-{
-};
-#endif
-
 struct shape
 {
   enum {ADD, MUL, HPL, SPH, CYL} what;
