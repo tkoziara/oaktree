@@ -60,6 +60,9 @@ REAL shape_normal (struct shape *shape, REAL *point, REAL *normal);
 /* output unique shape leaves overlapping (c,r) sphere and return their count */
 int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves);
 
+/* compute shape extents */
+void shape_extents (struct shape *shape, REAL *extents);
+
 /* free shape memory */
 void shape_destroy (struct shape *shape);
 
@@ -105,7 +108,9 @@ struct simulation
 {
   char *outpath;
 
-  REAL duration, step;
+  REAL duration;
+
+  REAL step;
 
   REAL cutoff;
 

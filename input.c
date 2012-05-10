@@ -145,20 +145,20 @@ static int is_simulation (SIMULATION *obj, char *var)
 /* constructor */
 static PyObject* SIMULATION_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-  KEYWORDS ("outpath", "duration", "step", "cutoff", "extents");
+  KEYWORDS ("outpath", "duration", "step", "cutoff");
   double duration, step, cutoff;
-  PyObject *outpath, *extents;
   struct simulation *simu;
+  PyObject *outpath;
   SIMULATION *self;
 
   self = (SIMULATION*)type->tp_alloc (type, 0);
 
   if (self)
   {
-    PARSEKEYS ("OdddO", &outpath, &duration, &step, &cutoff, &extents);
+    PARSEKEYS ("Oddd", &outpath, &duration, &step, &cutoff);
 
     TYPETEST (is_string (outpath, kwl [0]) && is_positive (duration, kwl[1]) &&
-	      is_positive (step, kwl[2]) && is_positive (cutoff, kwl[4]) && is_tuple (extents, kwl[5], 6));
+	      is_positive (step, kwl[2]) && is_positive (cutoff, kwl[4]));
 
     ERRMEM (simu = calloc (1, sizeof (struct simulation)));
     ERRMEM (simu->outpath = malloc (strlen (PyString_AsString (outpath)) + 1));
@@ -166,12 +166,6 @@ static PyObject* SIMULATION_new (PyTypeObject *type, PyObject *args, PyObject *k
     simu->duration = duration;
     simu->step = step;
     simu->cutoff = cutoff;
-    simu->extents [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 0));
-    simu->extents [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 1));
-    simu->extents [2] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 2));
-    simu->extents [3] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 3));
-    simu->extents [4] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 4));
-    simu->extents [5] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (extents, 5));
 
     self->ptr = simu;
 

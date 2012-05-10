@@ -140,7 +140,7 @@ SIMULATION object stores data specific to one distinct analysis.
 \end_layout
 
 \begin_layout Subsection*
-obj = SIMULATION (outpath, duration, step, cutoff, extents)
+obj = SIMULATION (outpath, duration, step, cutoff)
 \end_layout
 
 \begin_layout Itemize
@@ -181,18 +181,6 @@ step
 cutoff
 \series default
  - cutoff length below which geometrical details are not resolved
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-extents
-\series default
- - tuple 
-\begin_inset Formula $\left(x_{min},y_{min},z_{min},x_{max},y_{max},z_{max}\right)$
-\end_inset
-
- of domain extents beyond which bodies are deleted
 \end_layout
 
 \begin_layout Standard
@@ -900,15 +888,7 @@ A solid is created in a simulation.
 \end_layout
 
 \begin_layout Subsection*
-obj = SOLID (simu, shape, label)
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-obj
-\series default
- - SOLID object
+SOLID (simu, shape, label)
 \end_layout
 
 \begin_layout Itemize
@@ -1073,6 +1053,46 @@ pressure
  - constant value or Python function: 
 \emph on
 value = pressure (time)
+\end_layout
+
+\end_inset
+
+
+\begin_inset Note Note
+status open
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:SOURCE"
+
+\end_inset
+
+SOURCE
+\end_layout
+
+\begin_layout Plain Layout
+A way to define fluid or soild source.
+\end_layout
+
+\end_inset
+
+
+\begin_inset Note Note
+status open
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:SINK"
+
+\end_inset
+
+SINK
+\end_layout
+
+\begin_layout Plain Layout
+A way to define fluid or soild sink.
 \end_layout
 
 \end_inset

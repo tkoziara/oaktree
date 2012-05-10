@@ -26,9 +26,13 @@ void render_octree (struct octree *octree)
   }
   else
   {
+    glEnable (GL_BLEND);
+
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     glBegin (GL_LINES);
 
-    glColor3f (0.2, 0.2, 0.2);
+    glColor4f (0.1, 0.1, 0.1, 0.1);
 
     e = octree->extents;
 
@@ -72,6 +76,8 @@ void render_octree (struct octree *octree)
     glVertex3f (e[0], e[4], e[5]);
 
     glEnd ();
+
+    glDisable (GL_BLEND);
   }
 }
 

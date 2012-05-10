@@ -1,4 +1,4 @@
-simu = SIMULATION ('out/cylinders', 1.0, 0.001, 0.001, (-1, -1, -1, 1, 1, 2))
+simu = SIMULATION ('out/cylinders', 1.0, 0.001, 0.001)
 
 a = CYLINDER ((0, 0, 0), 1, 1, 1, (1, 1, 1))
 b = CYLINDER ((0, 0, 0), 1, 0.8, 1, (1, 1, 1))

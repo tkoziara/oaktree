@@ -1,3 +1,9 @@
+Issues:
+#######
+
+Polygonisation of isosurfaces ideally aligned with octree planes. Currently ideal 0-levels are filtered out in polygonise.
+Doubly layered triangles could be cerated in this case. In rare cases the current code may not polygonise such cuts.
+
 Needed:
 #######
 

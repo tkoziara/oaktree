@@ -115,7 +115,7 @@ static void shape_leaves_with_counter (struct shape *shape, REAL c [3], REAL r, 
 }
 
 /* compare leaves */
-int compare_leaves (struct shape **ll, struct shape **rr)
+static int compare_leaves (struct shape **ll, struct shape **rr)
 {
   REAL u, v, w, a [3];
 
@@ -210,6 +210,40 @@ int compare_leaves (struct shape **ll, struct shape **rr)
     }
     break;
     default:
+    break;
+  }
+
+  return 0;
+}
+
+/* check whether entier shape has been subtracted */
+static int subtracted (struct shape *shape)
+{
+  switch (shape->what)
+  {
+  case ADD:
+  case MUL:
+    return subtracted (shape->left) && subtracted (shape->right);
+  case HPL:
+    {
+      struct halfplane *data = shape->data;
+
+      return data->s == -1;
+    }
+    break;
+  case SPH:
+    {
+      struct sphere *data = shape->data;
+
+      return data->s == -1;
+    }
+    break;
+  case CYL:
+    {
+      struct sphere *data = shape->data;
+
+      return data->s == -1;
+    }
     break;
   }
 
@@ -537,6 +571,84 @@ int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape *
   }
 
   return j+1;
+}
+
+/* compute shape extents */
+void shape_extents (struct shape *shape, REAL *extents)
+{
+  struct halfplane *halfplane;
+  struct sphere *sphere;
+  REAL l [6], r [6];
+
+  switch (shape->what)
+  {
+  case ADD:
+  case MUL:
+    shape_extents (shape->left, l);
+    shape_extents (shape->right, r);
+
+    if (shape->what == MUL && subtracted (shape->right))
+    {
+      COPY6 (l, extents); /* no contrubution from B in A - B */
+    }
+    else
+    {
+      if (l[0] < r[0]) extents[0] = l[0];
+      else extents[0] = r[0];
+      if (l[1] < r[1]) extents[1] = l[1];
+      else extents[1] = r[1];
+      if (l[2] < r[2]) extents[2] = l[2];
+      else extents[2] = r[2];
+      if (l[3] > r[3]) extents[3] = l[3];
+      else extents[3] = r[3];
+      if (l[4] > r[4]) extents[4] = l[4];
+      else extents[4] = r[4];
+      if (l[5] > r[5]) extents[5] = l[5];
+      else extents[5] = r[5];
+    }
+    break;
+  case HPL:
+    halfplane = shape->data;
+    if (fabs (halfplane->n[0]) > 1E-10 && fabs (halfplane->n[2]) > 1E-10)
+    {
+      l [0] = halfplane->n[2];
+      l [1] = halfplane->n[1];
+      l [2] = halfplane->n[0];
+    }
+    else
+    {
+      l [0] = halfplane->n[1];
+      l [1] = halfplane->n[0];
+      l [2] = halfplane->n[2];
+    }
+    PRODUCT (halfplane->n, l, r);
+    PRODUCT (halfplane->n, r, l);
+    extents [0] = halfplane->p[0] - l[0]*halfplane->r - r[0]*halfplane->r;
+    extents [1] = halfplane->p[1] - l[1]*halfplane->r - r[1]*halfplane->r;
+    extents [2] = halfplane->p[2] - l[2]*halfplane->r - r[2]*halfplane->r;
+    extents [3] = halfplane->p[0] + l[0]*halfplane->r + r[0]*halfplane->r;
+    extents [4] = halfplane->p[1] + l[1]*halfplane->r + r[1]*halfplane->r;
+    extents [5] = halfplane->p[2] + l[2]*halfplane->r + r[2]*halfplane->r;
+    break;
+  case SPH:
+    sphere = shape->data;
+    extents [0] = sphere->c[0] - sphere->r;
+    extents [1] = sphere->c[1] - sphere->r;
+    extents [2] = sphere->c[2] - sphere->r;
+    extents [3] = sphere->c[0] + sphere->r;
+    extents [4] = sphere->c[1] + sphere->r;
+    extents [5] = sphere->c[2] + sphere->r;
+    break;
+  case CYL:
+    /* cylinder is skipped */
+    extents [0] = FLT_MAX;
+    extents [1] = FLT_MAX;
+    extents [2] = FLT_MAX;
+    extents [3] = -FLT_MAX;
+    extents [4] = -FLT_MAX;
+    extents [5] = -FLT_MAX;
+    break;
+  }
 }
 
 /* free shape memory */
