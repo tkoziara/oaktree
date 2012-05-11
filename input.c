@@ -304,6 +304,88 @@ static PyGetSetDef SHAPE_getset [] =
 { {NULL, 0, 0, NULL, NULL} };
 
 /*
+ * SOLID
+ */
+
+static PyTypeObject SOLID_TYPE;
+
+typedef struct {
+  PyObject_HEAD
+  struct solid *ptr;
+} SOLID;
+
+#if 0
+/* SOLID test */
+static int is_solid (SOLID *obj, char *var)
+{
+  if (obj)
+  {
+    if (!PyObject_IsInstance ((PyObject*)obj, (PyObject*)&SOLID_TYPE))
+    {
+      char buf [BUFLEN];
+      sprintf (buf, "'%s' must be a SOLID", var);
+      PyErr_SetString (PyExc_TypeError, buf);
+      return 0;
+    }
+  }
+
+  return 1;
+}
+#endif
+
+/* constructor */
+static PyObject* SOLID_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("simu", "shape", "label");
+  struct solid *solid;
+  SIMULATION *simu;
+  PyObject *label;
+  SHAPE *shape;
+  SOLID *self;
+
+  self = (SOLID*)type->tp_alloc (type, 0);
+
+  if (self)
+  {
+    PARSEKEYS ("OOO", &simu, &shape, &label);
+
+    TYPETEST (is_simulation (simu, kwl[0]) && is_shape (shape, kwl[1]) && is_string (label, kwl[2]));
+
+    ERRMEM (solid = malloc (sizeof (struct solid)));
+    solid->shape = shape_copy (shape->ptr);
+    ERRMEM (solid->label = malloc (strlen (PyString_AsString (label)) + 1));
+    strcpy (solid->label, PyString_AsString (label));
+
+    if (simu->ptr->solid) simu->ptr->solid->prev = solid;
+    solid->next = simu->ptr->solid;
+    simu->ptr->solid = solid;
+    solid->prev = NULL;
+
+    self->ptr = solid;
+  }
+
+  return (PyObject*)self;
+}
+
+/* destructor */
+static void SOLID_dealloc (SOLID *self)
+{
+  self->ob_type->tp_free ((PyObject*)self);
+}
+
+/* SOLID methods */
+static PyMethodDef SOLID_methods [] =
+{ {NULL, NULL, 0, NULL} };
+
+/* SOLID members */
+static PyMemberDef SOLID_members [] =
+{ {NULL, 0, 0, 0, NULL} };
+
+/* SOLID getset */
+static PyGetSetDef SOLID_getset [] =
+{ {NULL, 0, 0, NULL, NULL} };
+
+/*
  * SUBROUTINES
  */
 
@@ -848,32 +930,6 @@ static PyObject* ROTATE (PyObject *self, PyObject *args, PyObject *kwds)
   Py_RETURN_NONE;
 }
 
-/* create solid */
-static PyObject* SOLID (PyObject *self, PyObject *args, PyObject *kwds)
-{
-  KEYWORDS ("simu", "shape", "label");
-  struct solid *solid;
-  SIMULATION *simu;
-  PyObject *label;
-  SHAPE *shape;
-
-  PARSEKEYS ("OOO", &simu, &shape, &label);
-
-  TYPETEST (is_simulation (simu, kwl[0]) && is_shape (shape, kwl[1]) && is_string (label, kwl[2]));
-
-  ERRMEM (solid = malloc (sizeof (struct solid)));
-  solid->shape = shape_copy (shape->ptr);
-  ERRMEM (solid->label = malloc (strlen (PyString_AsString (label)) + 1));
-  strcpy (solid->label, PyString_AsString (label));
-
-  if (simu->ptr->solid) simu->ptr->solid->prev = solid;
-  solid->next = simu->ptr->solid;
-  simu->ptr->solid = solid;
-  solid->prev = NULL;
-
-  Py_RETURN_NONE;
-}
-
 static PyMethodDef methods [] =
 {
   {"SPHERE", (PyCFunction)SPHERE, METH_VARARGS|METH_KEYWORDS, "Create sphere"},
@@ -886,7 +942,6 @@ static PyMethodDef methods [] =
   {"DIFFERENCE", (PyCFunction)DIFFERENCE, METH_VARARGS|METH_KEYWORDS, "Difference of shapes"},
   {"MOVE", (PyCFunction)MOVE, METH_VARARGS|METH_KEYWORDS, "Move shape"},
   {"ROTATE", (PyCFunction)ROTATE, METH_VARARGS|METH_KEYWORDS, "Rotate shape"},
-  {"SOLID", (PyCFunction)SOLID, METH_VARARGS|METH_KEYWORDS, "Create solid"},
   {NULL, 0, 0, NULL}
 };
 
@@ -900,6 +955,13 @@ static void initinput (void)
 
   if (!(m =  Py_InitModule3 ("oaktree", methods, "oaktree module"))) return;
 
+  TYPEINIT (SIMULATION_TYPE, SIMULATION, "solfec.SIMULATION",
+    Py_TPFLAGS_DEFAULT, SIMULATION_dealloc, SIMULATION_new,
+    SIMULATION_methods, SIMULATION_members, SIMULATION_getset);
+  if (PyType_Ready (&SIMULATION_TYPE) < 0) return;
+  Py_INCREF (&SIMULATION_TYPE);
+  PyModule_AddObject (m, "SIMULATION", (PyObject*)&SIMULATION_TYPE);
+
   TYPEINIT (SHAPE_TYPE, SHAPE, "solfec.SHAPE",
     Py_TPFLAGS_DEFAULT, SHAPE_dealloc, SHAPE_new,
     SHAPE_methods, SHAPE_members, SHAPE_getset);
@@ -907,12 +969,12 @@ static void initinput (void)
   Py_INCREF (&SHAPE_TYPE);
   PyModule_AddObject (m, "SHAPE", (PyObject*)&SHAPE_TYPE);
 
-  TYPEINIT (SIMULATION_TYPE, SIMULATION, "solfec.SIMULATION",
-    Py_TPFLAGS_DEFAULT, SIMULATION_dealloc, SIMULATION_new,
-    SIMULATION_methods, SIMULATION_members, SIMULATION_getset);
-  if (PyType_Ready (&SIMULATION_TYPE) < 0) return;
-  Py_INCREF (&SIMULATION_TYPE);
-  PyModule_AddObject (m, "SIMULATION", (PyObject*)&SIMULATION_TYPE);
+  TYPEINIT (SOLID_TYPE, SOLID, "solfec.SOLID",
+    Py_TPFLAGS_DEFAULT, SOLID_dealloc, SOLID_new,
+    SOLID_methods, SOLID_members, SOLID_getset);
+  if (PyType_Ready (&SOLID_TYPE) < 0) return;
+  Py_INCREF (&SOLID_TYPE);
+  PyModule_AddObject (m, "SOLID", (PyObject*)&SOLID_TYPE);
 }
 
 /* 

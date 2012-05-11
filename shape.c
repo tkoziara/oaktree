@@ -240,7 +240,7 @@ static int subtracted (struct shape *shape)
     break;
   case CYL:
     {
-      struct sphere *data = shape->data;
+      struct cylinder *data = shape->data;
 
       return data->s == -1;
     }

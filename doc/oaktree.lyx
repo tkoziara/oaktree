@@ -198,11 +198,19 @@ MATERIAL
 \end_layout
 
 \begin_layout Plain Layout
-MATERIAL associates a volume color with a solid material.
+Solid material.
 \end_layout
 
 \begin_layout Subsection*
-MATERIAL (simu, density, young, poisson)
+obj = MATERIAL (simu, density, young, poisson)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - MATERIAL object
 \end_layout
 
 \begin_layout Itemize
@@ -254,7 +262,7 @@ CONTACT
 \end_layout
 
 \begin_layout Plain Layout
-CONTACT defines contact properties between a pair of surfaces.
+Contact properties between a pair of surfaces.
 \end_layout
 
 \begin_layout Subsection*
@@ -318,7 +326,7 @@ GLUE
 \end_layout
 
 \begin_layout Plain Layout
-GLUE defines glue between a pair of surfaces.
+Glue between a pair of surfaces.
 \end_layout
 
 \begin_layout Subsection*
@@ -914,7 +922,7 @@ angle
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
-name "sub:RIGID"
+name "sub:SOLID"
 
 \end_inset
 
@@ -926,7 +934,15 @@ A solid is created in a simulation.
 \end_layout
 
 \begin_layout Subsection*
-SOLID (simu, shape, label)
+obj = SOLID (simu, shape, label)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SOLID object
 \end_layout
 
 \begin_layout Itemize
@@ -972,57 +988,15 @@ Fix surface.
 \end_layout
 
 \begin_layout Subsection*
-FIX (body, scolor)
+FIX (solid, scolor | direction)
 \end_layout
 
 \begin_layout Itemize
 
 \series bold
-body
+solid
 \series default
- - BODY object
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-scolor
-\series default
- - surface to fix
-\end_layout
-
-\end_inset
-
-
-\emph on
-
-\begin_inset Note Note
-status open
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:VELOCITY"
-
-\end_inset
-
-VELOCITY
-\end_layout
-
-\begin_layout Plain Layout
-Prescribe normal surface velocity
-\end_layout
-
-\begin_layout Subsection*
-VELOCITY (body, scolor, pressure)
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-body
-\series default
- - BODY object
+ - SOLID object
 \end_layout
 
 \begin_layout Itemize
@@ -1030,21 +1004,21 @@ body
 \series bold
 scolor
 \series default
- - surface to prescribe velocity to
+ - surface color
 \end_layout
 
 \begin_layout Itemize
 
 \series bold
-pressure
+direction
 \series default
- - constant value or Python function: 
-\emph on
-value = pressure (time)
+ - either 'ALL' or 'NORMAL' (default: 'ALL')
 \end_layout
 
 \end_inset
 
+
+\emph on
 
 \begin_inset Note Note
 status open
@@ -1064,15 +1038,15 @@ Define surface pressure.
 \end_layout
 
 \begin_layout Subsection*
-PRESSURE (body, scolor, pressure)
+PRESSURE (solid, scolor, pressure)
 \end_layout
 
 \begin_layout Itemize
 
 \series bold
-body
+solid
 \series default
- - BODY object
+ - SOLID object
 \end_layout
 
 \begin_layout Itemize
@@ -1080,7 +1054,7 @@ body
 \series bold
 scolor
 \series default
- - surface to apply pressure
+ - surface color
 \end_layout
 
 \begin_layout Itemize
@@ -1110,7 +1084,7 @@ SOURCE
 \end_layout
 
 \begin_layout Plain Layout
-A way to define fluid or soild source.
+Fluid or soild source.
 \end_layout
 
 \end_inset
@@ -1130,7 +1104,7 @@ SINK
 \end_layout
 
 \begin_layout Plain Layout
-A way to define fluid or soild sink.
+Fluid or soild sink.
 \end_layout
 
 \end_inset
