@@ -26,10 +26,6 @@ void render_octree (struct octree *octree)
   }
   else
   {
-    glEnable (GL_BLEND);
-
-    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
     glBegin (GL_LINES);
 
     glColor4f (0.1, 0.1, 0.1, 0.1);
@@ -76,38 +72,113 @@ void render_octree (struct octree *octree)
     glVertex3f (e[0], e[4], e[5]);
 
     glEnd ();
-
-    glDisable (GL_BLEND);
   }
 }
 
-/* render shapes */
-void render_shapes (struct octree *octree, REAL cutoff)
+/* render solids */
+void render_solids (struct octree *octree)
 {
-  struct triang *triang;
+  struct element *element;
   int i;
 
   if (octree->down [0])
   {
-    for (i = 0; i < 8; i ++) render_shapes (octree->down [i], cutoff);
+    for (i = 0; i < 8; i ++) render_solids (octree->down [i]);
   }
 
   glBegin (GL_TRIANGLES);
 
   glColor3f (0.5, 0.5, 0.5);
 
-  for (triang = octree->triang; triang; triang = triang->next)
+  for (element = octree->element; element; element = element->next)
   {
-    REAL (*t) [4][3] = triang->t;
+    struct triang *triang = element->triang;
 
-    for (i = 0; i < triang->n; i ++)
+    if (triang)
     {
-      glNormal3f (t[i][3][0], t[i][3][1], t[i][3][2]);
-      glVertex3f (t[i][0][0], t[i][0][1], t[i][0][2]);
-      glVertex3f (t[i][1][0], t[i][1][1], t[i][1][2]);
-      glVertex3f (t[i][2][0], t[i][2][1], t[i][2][2]);
+      REAL (*t) [4][3] = triang->t;
+
+      for (i = 0; i < triang->n; i ++)
+      {
+	glNormal3f (t[i][3][0], t[i][3][1], t[i][3][2]);
+	glVertex3f (t[i][0][0], t[i][0][1], t[i][0][2]);
+	glVertex3f (t[i][1][0], t[i][1][1], t[i][1][2]);
+	glVertex3f (t[i][2][0], t[i][2][1], t[i][2][2]);
+      }
     }
   }
 
   glEnd ();
+}
+
+/* render elements */
+void render_elements (struct octree *octree)
+{
+  REAL e [6], w, *x;
+  int i;
+
+  if (octree->down [0])
+  {
+    for (i = 0; i < 8; i ++) render_elements (octree->down [i]);
+  }
+
+  if (octree->element)
+  {
+    glBegin (GL_QUADS);
+
+    glColor4f (0.6, 0.6, 0.6, 0.3);
+
+    x = octree->extents;
+    w = x[3] - x[0];
+    e[0] = x[0] + 0.07*w;
+    e[1] = x[1] + 0.07*w;
+    e[2] = x[2] + 0.07*w;
+    e[3] = x[0] + 0.93*w;
+    e[4] = x[1] + 0.93*w;
+    e[5] = x[2] + 0.93*w;
+
+    /* lower base */
+    glNormal3f (0, 0, -1);
+    glVertex3f (e[0], e[1], e[2]);
+    glVertex3f (e[0], e[4], e[2]);
+    glVertex3f (e[3], e[4], e[2]);
+    glVertex3f (e[3], e[1], e[2]);
+
+    /* upper base */
+    glNormal3f (0, 0, 1);
+    glVertex3f (e[0], e[1], e[5]);
+    glVertex3f (e[3], e[1], e[5]);
+    glVertex3f (e[3], e[4], e[5]);
+    glVertex3f (e[0], e[4], e[5]);
+
+    /* y low */
+    glNormal3f (0, -1, 0);
+    glVertex3f (e[0], e[1], e[2]);
+    glVertex3f (e[3], e[1], e[2]);
+    glVertex3f (e[3], e[1], e[5]);
+    glVertex3f (e[0], e[1], e[5]);
+
+    /* y high */
+    glNormal3f (0, 1, 0);
+    glVertex3f (e[0], e[4], e[2]);
+    glVertex3f (e[0], e[4], e[5]);
+    glVertex3f (e[3], e[4], e[5]);
+    glVertex3f (e[3], e[4], e[2]);
+
+    /* x low */
+    glNormal3f (-1, 0, 0);
+    glVertex3f (e[0], e[1], e[2]);
+    glVertex3f (e[0], e[1], e[5]);
+    glVertex3f (e[0], e[4], e[5]);
+    glVertex3f (e[0], e[4], e[2]);
+
+    /* x high */
+    glNormal3f (1, 0, 0);
+    glVertex3f (e[3], e[1], e[2]);
+    glVertex3f (e[3], e[4], e[2]);
+    glVertex3f (e[3], e[4], e[5]);
+    glVertex3f (e[3], e[1], e[5]);
+
+    glEnd ();
+  }
 }

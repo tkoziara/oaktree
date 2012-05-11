@@ -10,21 +10,21 @@ struct halfplane
 {
   REAL p [3], n [3], r, s;
 
-  short vcolor, scolor;
+  short scolor;
 };
 
 struct sphere
 {
   REAL c [3], r, s;
 
-  short vcolor, scolor;
+  short scolor;
 };
 
 struct cylinder
 {
   REAL p [3], d [3], r, s;
 
-  short vcolor, scolor;
+  short scolor;
 };
 
 struct shape
@@ -57,43 +57,14 @@ REAL shape_evaluate (struct shape *shape, REAL *point);
 /* return value and compute shape normal at given point */
 REAL shape_normal (struct shape *shape, REAL *point, REAL *normal);
 
-/* output unique shape leaves overlapping (c,r) sphere and return their count */
-int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves);
+/* output unique shape leaves overlapping (c,r) sphere and return their count or inside flag if count is zero */
+int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves, int *inside);
 
 /* compute shape extents */
 void shape_extents (struct shape *shape, REAL *extents);
 
 /* free shape memory */
 void shape_destroy (struct shape *shape);
-
-struct triang
-{
-  REAL (*t) [4][3];
-
-  short n;
-
-  struct shape *shape;
-
-  struct triang *next;
-};
-
-struct octree
-{
-  REAL extents [6];
-
-  struct triang *triang;
-
-  struct octree *up, *down [8];
-};
-
-/* create octree */
-struct octree* octree_create (REAL extents [6]);
-
-/* insert shape and refine octree down to a cutoff edge length */
-void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutoff);
-
-/* free octree memory */
-void octree_destroy (struct octree *octree);
 
 struct solid
 {
@@ -103,6 +74,40 @@ struct solid
 
   struct solid *prev, *next;
 };
+
+struct triang
+{
+  REAL (*t) [4][3];
+
+  short n;
+};
+
+struct element
+{
+  struct triang *triang;
+
+  struct solid *solid;
+
+  struct element *next;
+};
+
+struct octree
+{
+  REAL extents [6];
+
+  struct element *element;
+
+  struct octree *up, *down [8];
+};
+
+/* create octree */
+struct octree* octree_create (REAL extents [6]);
+
+/* insert solid and refine octree down to a cutoff edge length */
+void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff);
+
+/* free octree memory */
+void octree_destroy (struct octree *octree);
 
 struct simulation
 {

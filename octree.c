@@ -210,13 +210,14 @@ struct octree* octree_create (REAL extents [6])
   return octree;
 }
 
-/* insert shape and refine octree down to a cutoff edge length */
-void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutoff)
+/* insert solid and refine octree down to a cutoff edge length */
+void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff)
 {
   REAL t [5][3][3], p [8][3], q [2][3], (*d) [8], (*s) [4][3], *x = octree->extents;
   int i, j, k, l, n, m, o, size;
   char allaccurate, *flagged;
   struct shape **leaf, **tmp;
+  struct element *element;
   struct triang *triang;
 
   VECTOR (p[0], x[0], x[1], x[2]);
@@ -231,8 +232,20 @@ void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutof
   MID (p[0], p[6], q[0]);
   SUB (q[0], p[0], q[1]);
 
-  n = shape_unique_leaves (shape, q[0], LEN (q[1]), &leaf);
-  if (n == 0) return;
+  n = shape_unique_leaves (solid->shape, q[0], LEN (q[1]), &leaf, &i);
+  if (n == 0)
+  {
+    if (i)
+    {
+      ERRMEM (element = malloc (sizeof (struct element)));
+      element->triang = NULL;
+      element->solid = solid;
+      element->next = octree->element;
+      octree->element = element;
+    }
+
+    return;
+  }
   size = 128;
 
   ERRMEM (flagged = calloc (n, 1))
@@ -266,7 +279,7 @@ void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutof
 
   /* recurse down the tree if too many leaves */
 
-  if (allaccurate && l > 8) allaccurate = 0; /* 8 is arbitrary XXX */
+  if (allaccurate && l > 3) allaccurate = 0; /* 3 is arbitrary XXX */
 
   /* if all leaves are accorate extract triangles */
 
@@ -290,7 +303,7 @@ void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutof
 	for (j = 0; j < l; j ++)
 	{
 	  m = 0;
-	  split (leaf[i], t[j], tmp, k, shape, cutoff, &s, &m, &size);
+	  split (leaf[i], t[j], tmp, k, solid->shape, cutoff, &s, &m, &size);
 
 	  if (m)
 	  {
@@ -321,9 +334,11 @@ void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutof
 
   if (triang) /* triangulation was created */
   {
-    triang->shape = shape;
-    triang->next = octree->triang;
-    octree->triang = triang;
+    ERRMEM (element = malloc (sizeof (struct element)));
+    element->triang = triang;
+    element->solid = solid;
+    element->next = octree->element;
+    octree->element = element;
   }
   else if (!allaccurate) /* not enough accuracy */
   {
@@ -374,23 +389,27 @@ void octree_insert_shape (struct octree *octree, struct shape *shape, REAL cutof
       octree->down [7]->up = octree;
     }
 
-    for (i = 0; i < 8; i ++) octree_insert_shape (octree->down [i], shape, cutoff);
+    for (i = 0; i < 8; i ++) octree_insert_solid (octree->down [i], solid, cutoff);
   }
 }
 
 /* free octree memory */
 void octree_destroy (struct octree *octree)
 {
-  struct triang *triang, *next;
+  struct element *element, *next;
   int i;
 
   if (octree->down [0]) for (i = 0; i < 8; i ++) octree_destroy (octree->down [i]);
 
-  for (triang = octree->triang; triang; triang = next)
+  for (element = octree->element; element; element = next)
   {
-    next = triang->next;
-    free (triang->t);
-    free (triang);
+    next = element->next;
+    if (element->triang)
+    {
+      free (element->triang->t);
+      free (element->triang);
+    }
+    free (element);
   }
 
   free (octree);

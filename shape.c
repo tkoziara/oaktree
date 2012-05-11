@@ -535,8 +535,8 @@ REAL shape_normal (struct shape *shape, REAL *point, REAL *normal)
   return v;
 }
 
-/* output unique shape leaves overlapping (c,r) sphere and return their count */
-int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves)
+/* output unique shape leaves overlapping (c,r) sphere and return their count or inside flag if count is zero */
+int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves, int *inside)
 {
   struct shape **leaf;
   int i, j, k, n;
@@ -544,7 +544,16 @@ int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape *
  
   v = shape_evaluate (shape, c);
 
-  if (fabs (v) > r) return 0; /* inward/outward distance filter */
+  if (v > r)
+  {
+    *inside = 0;
+    return 0; /* outward distance filter */
+  }
+  if (v < -r)
+  {
+    *inside = 1;
+    return 0; /* inward distance filter */
+  }
 
   n = shape_leaves_count (shape);
 
@@ -579,6 +588,7 @@ void shape_extents (struct shape *shape, REAL *extents)
   struct halfplane *halfplane;
   struct sphere *sphere;
   REAL l [6], r [6];
+  short i;
 
   switch (shape->what)
   {
@@ -609,26 +619,25 @@ void shape_extents (struct shape *shape, REAL *extents)
     break;
   case HPL:
     halfplane = shape->data;
-    if (fabs (halfplane->n[0]) > 1E-10 && fabs (halfplane->n[2]) > 1E-10)
-    {
-      l [0] = halfplane->n[2];
-      l [1] = halfplane->n[1];
-      l [2] = halfplane->n[0];
-    }
-    else
-    {
-      l [0] = halfplane->n[1];
-      l [1] = halfplane->n[0];
-      l [2] = halfplane->n[2];
-    }
+    COPY (halfplane->n, l);
+    MAXABSIDX (l, i);
+    l [i] = 0.0;
+    l [(i+1)%3] = 1.0;
+    l [(i+2)%3] = 0;
     PRODUCT (halfplane->n, l, r);
     PRODUCT (halfplane->n, r, l);
-    extents [0] = halfplane->p[0] - l[0]*halfplane->r - r[0]*halfplane->r;
-    extents [1] = halfplane->p[1] - l[1]*halfplane->r - r[1]*halfplane->r;
-    extents [2] = halfplane->p[2] - l[2]*halfplane->r - r[2]*halfplane->r;
-    extents [3] = halfplane->p[0] + l[0]*halfplane->r + r[0]*halfplane->r;
-    extents [4] = halfplane->p[1] + l[1]*halfplane->r + r[1]*halfplane->r;
-    extents [5] = halfplane->p[2] + l[2]*halfplane->r + r[2]*halfplane->r;
+    l [3] = halfplane->p[0] - l[0]*halfplane->r - r[0]*halfplane->r;
+    l [4] = halfplane->p[1] - l[1]*halfplane->r - r[1]*halfplane->r;
+    l [5] = halfplane->p[2] - l[2]*halfplane->r - r[2]*halfplane->r;
+    r [3] = halfplane->p[0] + l[0]*halfplane->r + r[0]*halfplane->r;
+    r [4] = halfplane->p[1] + l[1]*halfplane->r + r[1]*halfplane->r;
+    r [5] = halfplane->p[2] + l[2]*halfplane->r + r[2]*halfplane->r;
+    extents [0] = MIN (l[3], r[3]);
+    extents [1] = MIN (l[4], r[4]);
+    extents [2] = MIN (l[5], r[5]);
+    extents [3] = MAX (l[3], r[3]);
+    extents [4] = MAX (l[4], r[4]);
+    extents [5] = MAX (l[5], r[5]);
     break;
   case SPH:
     sphere = shape->data;

@@ -11,7 +11,10 @@
 /* render octree itself */
 void render_octree (struct octree *octree);
 
-/* render shapes */
-void render_shapes (struct octree *octree, REAL cutoff);
+/* render solids */
+void render_solids (struct octree *octree);
+
+/* render elements */
+void render_elements (struct octree *octree);
 
 #endif

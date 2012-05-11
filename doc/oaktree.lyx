@@ -202,7 +202,7 @@ MATERIAL associates a volume color with a solid material.
 \end_layout
 
 \begin_layout Subsection*
-MATERIAL (simu, vcolor, density, young, poisson)
+MATERIAL (simu, density, young, poisson)
 \end_layout
 
 \begin_layout Itemize
@@ -211,14 +211,6 @@ MATERIAL (simu, vcolor, density, young, poisson)
 simu
 \series default
  - simulation for which the material is defined
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-vcolor
-\series default
- - volume color to which the material applies
 \end_layout
 
 \begin_layout Itemize
@@ -254,19 +246,19 @@ status open
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
-name "sub:INTERFACE"
+name "sub:CONTACT"
 
 \end_inset
 
-INTERFACE
+CONTACT
 \end_layout
 
 \begin_layout Plain Layout
-INTERFACE defines contact properties between a pair of surfaces.
+CONTACT defines contact properties between a pair of surfaces.
 \end_layout
 
 \begin_layout Subsection*
-INTERFACE (simu, scolor1, scolor2, friction, restitution)
+CONTACT (simu, scolor1, scolor2, friction, restitution)
 \end_layout
 
 \begin_layout Itemize
@@ -312,6 +304,54 @@ restitution
 \end_inset
 
 
+\begin_inset Note Note
+status open
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:GLUE"
+
+\end_inset
+
+GLUE
+\end_layout
+
+\begin_layout Plain Layout
+GLUE defines glue between a pair of surfaces.
+\end_layout
+
+\begin_layout Subsection*
+GLUE (simu, scolor1, scolor2)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+simu
+\series default
+ - simulation for which the interface is defined
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor1
+\series default
+ - first surface color
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor2
+\series default
+ - second surface color
+\end_layout
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section
@@ -329,7 +369,7 @@ A sphere shape.
 \end_layout
 
 \begin_layout Subsection*
-obj = SPHERE (center, r, vcolor, scolor)
+obj = SPHERE (center, r, scolor)
 \end_layout
 
 \begin_layout Itemize
@@ -367,14 +407,6 @@ r
 \begin_layout Itemize
 
 \series bold
-vcolor
-\series default
- - integer volume color
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
 scolor
 \series default
  - integer surface color
@@ -395,7 +427,7 @@ A cylinder shape.
 \end_layout
 
 \begin_layout Subsection*
-obj = CYLINDER (base, h, r, vcolor, scolor)
+obj = CYLINDER (base, h, r, scolor)
 \end_layout
 
 \begin_layout Itemize
@@ -445,14 +477,6 @@ r
 \begin_layout Itemize
 
 \series bold
-vcolor
-\series default
- - integer volume color
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
 scolor
 \series default
  - integer tuple 
@@ -477,7 +501,7 @@ A cube shape.
 \end_layout
 
 \begin_layout Subsection*
-obj = CUBE (corner, u, v, w, vcolor, scolor)
+obj = CUBE (corner, u, v, w, scolor)
 \end_layout
 
 \begin_layout Itemize
@@ -543,14 +567,6 @@ w
 \begin_layout Itemize
 
 \series bold
-vcolor
-\series default
- - integer volume color
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
 scolor
 \series default
  - integer tuple 
@@ -559,10 +575,6 @@ scolor
 
  of surface colors
 \end_layout
-
-\begin_layout Standard
-\begin_inset Note Note
-status open
 
 \begin_layout Section
 \begin_inset CommandInset label
@@ -574,12 +586,12 @@ name "sub:POLYGON"
 POLYGON
 \end_layout
 
-\begin_layout Plain Layout
+\begin_layout Standard
 A shape extruded from a polygon.
 \end_layout
 
 \begin_layout Subsection*
-obj = POLYGON (polygon, h, vcolor, scolor)
+obj = POLYGON (polygon, h, scolor)
 \end_layout
 
 \begin_layout Itemize
@@ -599,7 +611,12 @@ polygon
 \begin_inset Formula $\left[\left(x_{1},y_{1}\right),\left(x_{2},y_{2}\right),...,\left(x_{n},y_{n}\right)\right]$
 \end_inset
 
- of vertices defining closed polygon
+ of vertices defining a closed polygon in counter clock-wise order when
+ looking down from a positive 
+\begin_inset Formula $z$
+\end_inset
+
+ point
 \end_layout
 
 \begin_layout Itemize
@@ -617,14 +634,6 @@ h
 \begin_layout Itemize
 
 \series bold
-vcolor
-\series default
- - integer volume color
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
 scolor
 \series default
  - integer tuple 
@@ -634,9 +643,38 @@ scolor
  of surface colors
 \end_layout
 
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:COPY"
+
 \end_inset
 
+COPY
+\end_layout
 
+\begin_layout Standard
+Copy shape.
+\end_layout
+
+\begin_layout Subsection*
+obj = COPY (shape)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+obj
+\series default
+ - SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape
+\series default
+ - input SHAPE
 \end_layout
 
 \begin_layout Section

@@ -19,15 +19,77 @@
 struct simulation *simulation = NULL;
 
 #if OPENGL
-/* global viewer data */
-static int vieweron = 0,
-	   width = 512,
-	   height = 512; 
+#if __APPLE__
+  #include <GLUT/glut.h>
+#else
+  #include <GL/glut.h>
+  #include <GL/glext.h>
+#endif
+
+static int vieweron = 0, width = 512, height = 512;  /* viewer flag, initial window width and height */
+enum {MENU_SIMULATION = 0, MENU_RENDER, MENU_LAST}; /* menu identifiers */
+static char* menu_name [MENU_LAST];  /* menu names */
+static int menu_code [MENU_LAST]; /* menu codes */
+enum {SIMULATION_NEXT, SIMULATION_PREVIOUS, RENDER_SOLIDS, RENDER_ELEMENTS, RENDER_OCTREE}; /* menu items */
+static enum {SOLIDS = 0x01, ELEMENTS = 0x02, OCTREE = 0x04} render_item = SOLIDS|OCTREE; /* render item */
+
+/* simulation menu callback */
+static void menu_simulation (int item)
+{
+  switch (item)
+  {
+  case SIMULATION_NEXT:
+    if (simulation->next) simulation = simulation->next;
+    break;
+  case SIMULATION_PREVIOUS:
+    if (simulation->prev) simulation = simulation->prev;
+    break;
+  }
+
+  viewer_redraw_all ();
+}
+
+/* render menu callback */
+static void menu_render (int item)
+{
+  switch (item)
+  {
+  case RENDER_SOLIDS:
+    if (render_item & SOLIDS) render_item &= ~SOLIDS;
+    else render_item |= SOLIDS;
+    break;
+  case RENDER_ELEMENTS:
+    if (render_item & ELEMENTS) render_item &= ~ELEMENTS;
+    else render_item |= ELEMENTS;
+    break;
+  case RENDER_OCTREE:
+    if (render_item & OCTREE) render_item &= ~OCTREE;
+    else render_item |= OCTREE;
+    break;
+  }
+
+  viewer_redraw_all ();
+}
 
 /* menu callback */
 static int  menu (char ***names, int **codes)
 {
-  return 0;
+  ASSERT (simulation, "No simulation defined!");
+
+  menu_name [MENU_SIMULATION] = "simulation";
+  menu_code [MENU_SIMULATION] = glutCreateMenu (menu_simulation);
+  glutAddMenuEntry ("previous /</", SIMULATION_PREVIOUS);
+  glutAddMenuEntry ("next />/", SIMULATION_NEXT);
+
+  menu_name [MENU_RENDER] = "render";
+  menu_code [MENU_RENDER] = glutCreateMenu (menu_render);
+  glutAddMenuEntry ("solids /s/", RENDER_SOLIDS);
+  glutAddMenuEntry ("elements /e/", RENDER_ELEMENTS);
+  glutAddMenuEntry ("octree /o/", RENDER_OCTREE);
+
+  *names = menu_name;
+  *codes = menu_code;
+  return MENU_LAST;
 }
 
 /* init callback */
@@ -55,15 +117,59 @@ static void render ()
 {
   if (simulation)
   {
-    render_shapes (simulation->octree, simulation->cutoff);
+    if (render_item & SOLIDS) render_solids (simulation->octree);
 
-    render_octree (simulation->octree);
+    if (render_item & ELEMENTS)
+    {
+      if (render_item & SOLIDS)
+      {
+	glEnable (GL_BLEND);
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      }
+
+      render_elements (simulation->octree);
+
+      if (render_item & SOLIDS) glDisable (GL_BLEND);
+    }
+
+    if (render_item & OCTREE)
+    {
+      if (render_item & (SOLIDS|ELEMENTS))
+      {
+	glEnable (GL_BLEND);
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      }
+
+      render_octree (simulation->octree);
+
+      if (render_item & (SOLIDS|ELEMENTS)) glDisable (GL_BLEND);
+    }
   }
 }
 
 /* key callback */
 static void key (int key, int x, int y)
 {
+  switch (key)
+  {
+  case 27:
+    break;
+  case '<':
+    menu_simulation (SIMULATION_PREVIOUS);
+    break;
+  case '>':
+    menu_simulation (SIMULATION_NEXT);
+    break;
+  case 's':
+    menu_render (RENDER_SOLIDS);
+    break;
+  case 'e':
+    menu_render (RENDER_ELEMENTS);
+    break;
+  case 'o':
+    menu_render (RENDER_OCTREE);
+    break;
+  }
 }
 
 /* keyspec callback */
@@ -131,7 +237,7 @@ static void initialize (struct simulation *simulation)
   simulation->octree = octree_create (simulation->extents);
 
   for (solid = simulation->solid; solid; solid = solid->next)
-    octree_insert_shape (simulation->octree, solid->shape, simulation->cutoff);
+    octree_insert_solid (simulation->octree, solid, simulation->cutoff);
 
   dt = timerend (&t);
 
