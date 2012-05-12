@@ -256,6 +256,35 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
   allaccurate = 1;
   triang = NULL;
 
+  if (n > 1 && leaf [0]->what == HPL) /* in order to avoid refinement of planar faces along mute internal boundaries */
+  {
+    for (j = 0; j < 8; j ++) d [0][j] = shape_evaluate (solid->shape, p[j]); /* test actual shape first */
+
+    if (accurate (q[0], d[0], solid->shape, 0.01*cutoff)) /* if accurate with stricter criterion */
+    {
+      l = polygonise (p, d[0], 0.0, 0.01*cutoff, t); /* polygonise directly */
+
+      if (l)
+      {
+	ERRMEM (triang = calloc (1, sizeof (struct triang)));
+
+	ERRMEM (triang->t = malloc (l * sizeof (REAL [4][3])));
+
+	for (j = 0; j < l; j ++)
+	{
+	  COPY (t[j][0], triang->t [j][0]);
+	  COPY (t[j][1], triang->t [j][1]);
+	  COPY (t[j][2], triang->t [j][2]);
+	  NORMAL (t [j][0], t [j][1], t [j][2], triang->t [j][3]);
+	}
+
+	triang->n = l;
+      }
+
+      goto done; /* skip primitive based tests */
+    }
+  }
+
   for (l = i = 0; i < n; i ++)
   {
     for (j = 0; j < 8; j ++) d [i][j] = shape_evaluate (leaf[i], p[j]);
@@ -279,7 +308,7 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
 
   /* recurse down the tree if too many leaves */
 
-  if (allaccurate && l > 3) allaccurate = 0; /* 3 is arbitrary XXX */
+  if (allaccurate && l > 8) allaccurate = 0; /* 8 is arbitrary XXX */
 
   /* if all leaves are accorate extract triangles */
 
@@ -303,7 +332,7 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
 	for (j = 0; j < l; j ++)
 	{
 	  m = 0;
-	  split (leaf[i], t[j], tmp, k, solid->shape, cutoff, &s, &m, &size);
+	  split (leaf[i], t[j], tmp, k, solid->shape, cutoff, &s, &m, &size); /* split against all other flagged primitives */
 
 	  if (m)
 	  {
@@ -326,6 +355,7 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
     }
   }
 
+done:
   free (flagged);
   free (leaf);
   free (tmp);
@@ -349,42 +379,42 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
       x = (REAL*) t;
 
       VECTOR (x, p[0][0], p[0][1], p[0][2]);
-      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      VECTOR (x+3, q[0][0], q[0][1], q[0][2]);
       octree->down [0] = octree_create (x);
       octree->down [0]->up = octree;
 
-      VECTOR (x, p[0][0], p[0][1]+q[1][1], p[0][2]);
-      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      VECTOR (x, p[0][0], q[0][1], p[0][2]);
+      VECTOR (x+3, q[0][0], p[6][1], q[0][2]);
       octree->down [1] = octree_create (x);
       octree->down [1]->up = octree;
 
-      VECTOR (x, p[0][0]+q[1][0], p[0][1]+q[1][1], p[0][2]);
-      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      VECTOR (x, q[0][0], q[0][1], p[0][2]);
+      VECTOR (x+3, p[6][0], p[6][1], q[0][2]);
       octree->down [2] = octree_create (x);
       octree->down [2]->up = octree;
 
-      VECTOR (x, p[0][0]+q[1][0], p[0][1], p[0][2]);
-      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      VECTOR (x, q[0][0], p[0][1], p[0][2]);
+      VECTOR (x+3, p[6][0], q[0][1], q[0][2]);
       octree->down [3] = octree_create (x);
       octree->down [3]->up = octree;
 
-      VECTOR (x, p[0][0], p[0][1], p[0][2]+q[1][2]);
-      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      VECTOR (x, p[0][0], p[0][1], q[0][2]);
+      VECTOR (x+3, q[0][0], q[0][1], p[6][2]);
       octree->down [4] = octree_create (x);
       octree->down [4]->up = octree;
 
-      VECTOR (x, p[0][0], p[0][1]+q[1][1], p[0][2]+q[1][2]);
-      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      VECTOR (x, p[0][0], q[0][1], q[0][2]);
+      VECTOR (x+3, q[0][0], p[6][1], p[6][2]);
       octree->down [5] = octree_create (x);
       octree->down [5]->up = octree;
 
-      VECTOR (x, p[0][0]+q[1][0], p[0][1]+q[1][1], p[0][2]+q[1][2]);
-      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      VECTOR (x, q[0][0], q[0][1], q[0][2]);
+      VECTOR (x+3, p[6][0], p[6][1], p[6][2]);
       octree->down [6] = octree_create (x);
       octree->down [6]->up = octree;
 
-      VECTOR (x, p[0][0]+q[1][0], p[0][1], p[0][2]+q[1][2]);
-      VECTOR (x+3, x[0]+q[1][0], x[1]+q[1][1], x[2]+q[1][2]);
+      VECTOR (x, q[0][0], p[0][1], q[0][2]);
+      VECTOR (x+3, p[6][0], q[0][1], p[6][2]);
       octree->down [7] = octree_create (x);
       octree->down [7]->up = octree;
     }

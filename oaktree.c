@@ -222,6 +222,13 @@ static void initialize (struct simulation *simulation)
     if (e[5] > g[5]) g[5] = e[5];
   }
 
+  g [0] -= simulation->cutoff;
+  g [1] -= simulation->cutoff;
+  g [2] -= simulation->cutoff;
+  g [3] += simulation->cutoff;
+  g [4] += simulation->cutoff;
+  g [5] += simulation->cutoff;
+
   SUB (g+3, g, e);
   MAXABS (e, e[3]);
   MID (g+3, g, e);
