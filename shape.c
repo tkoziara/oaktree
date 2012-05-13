@@ -542,13 +542,12 @@ int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape *
   int i, j, k, n;
   REAL v;
  
+  *inside = 0;
+
   v = shape_evaluate (shape, c);
 
-  if (v > r)
-  {
-    *inside = 0;
-    return 0; /* outward distance filter */
-  }
+  if (v > r) return 0; /* outward distance filter */
+
   if (v < -r)
   {
     *inside = 1;
@@ -588,7 +587,6 @@ void shape_extents (struct shape *shape, REAL *extents)
   struct halfplane *halfplane;
   struct sphere *sphere;
   REAL l [6], r [6];
-  short i;
 
   switch (shape->what)
   {
@@ -619,25 +617,12 @@ void shape_extents (struct shape *shape, REAL *extents)
     break;
   case HPL:
     halfplane = shape->data;
-    COPY (halfplane->n, l);
-    MAXABSIDX (l, i);
-    l [i] = 0.0;
-    l [(i+1)%3] = 1.0;
-    l [(i+2)%3] = 0;
-    PRODUCT (halfplane->n, l, r);
-    PRODUCT (halfplane->n, r, l);
-    l [3] = halfplane->p[0] - l[0]*halfplane->r - r[0]*halfplane->r;
-    l [4] = halfplane->p[1] - l[1]*halfplane->r - r[1]*halfplane->r;
-    l [5] = halfplane->p[2] - l[2]*halfplane->r - r[2]*halfplane->r;
-    r [3] = halfplane->p[0] + l[0]*halfplane->r + r[0]*halfplane->r;
-    r [4] = halfplane->p[1] + l[1]*halfplane->r + r[1]*halfplane->r;
-    r [5] = halfplane->p[2] + l[2]*halfplane->r + r[2]*halfplane->r;
-    extents [0] = MIN (l[3], r[3]);
-    extents [1] = MIN (l[4], r[4]);
-    extents [2] = MIN (l[5], r[5]);
-    extents [3] = MAX (l[3], r[3]);
-    extents [4] = MAX (l[4], r[4]);
-    extents [5] = MAX (l[5], r[5]);
+    extents [0] = halfplane->p[0] - halfplane->r;
+    extents [1] = halfplane->p[1] - halfplane->r;
+    extents [2] = halfplane->p[2] - halfplane->r;
+    extents [3] = halfplane->p[0] + halfplane->r;
+    extents [4] = halfplane->p[1] + halfplane->r;
+    extents [5] = halfplane->p[2] + halfplane->r;
     break;
   case SPH:
     sphere = shape->data;

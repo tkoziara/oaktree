@@ -256,35 +256,6 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
   allaccurate = 1;
   triang = NULL;
 
-  if (n > 1 && leaf [0]->what == HPL) /* in order to avoid refinement of planar faces along mute internal boundaries */
-  {
-    for (j = 0; j < 8; j ++) d [0][j] = shape_evaluate (solid->shape, p[j]); /* test actual shape first */
-
-    if (accurate (q[0], d[0], solid->shape, 0.01*cutoff)) /* if accurate with stricter criterion */
-    {
-      l = polygonise (p, d[0], 0.0, 0.01*cutoff, t); /* polygonise directly */
-
-      if (l)
-      {
-	ERRMEM (triang = calloc (1, sizeof (struct triang)));
-
-	ERRMEM (triang->t = malloc (l * sizeof (REAL [4][3])));
-
-	for (j = 0; j < l; j ++)
-	{
-	  COPY (t[j][0], triang->t [j][0]);
-	  COPY (t[j][1], triang->t [j][1]);
-	  COPY (t[j][2], triang->t [j][2]);
-	  NORMAL (t [j][0], t [j][1], t [j][2], triang->t [j][3]);
-	}
-
-	triang->n = l;
-      }
-
-      goto done; /* skip primitive based tests */
-    }
-  }
-
   for (l = i = 0; i < n; i ++)
   {
     for (j = 0; j < 8; j ++) d [i][j] = shape_evaluate (leaf[i], p[j]);
@@ -292,16 +263,44 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
     if (!accurate (q[0], d[i], leaf[i], cutoff))  /* but not accurate enough */
     {
       allaccurate = 0;
-      break;
     }
-
-    for (j = 1; j < 8; j ++)
+    else for (j = 1; j < 8; j ++)
     {
       if (d [i][0] * d [i][j] <= 0.0) /* contains 0-isosurface */
       {
 	flagged [i] = 1;
 	l ++;
 	break;
+      }
+    }
+  }
+
+  /* will just one primitive do ? */
+
+  if (l > 1)
+  {
+    REAL z [8], w, v;
+
+    for (j = 0; j < 8; j ++)  z [j] = shape_evaluate (solid->shape, p[j]); /* sample shape */
+
+    for (i = 0; i < n; i ++)
+    {
+      if (flagged [i]) /* for flagged primitives */
+      {
+	for (w = 0, j = 0; j < 8; j ++)
+	{
+          v = d[i][j] - z[j];
+	  w += fabs (v);  /* compute difference between primitive and shape */
+	}
+
+	if (w < cutoff) /* if small enough, use only this primitive */
+	{
+	  for (j = 0; j < 8; j ++) d[0][j] = d[i][j];
+	  allaccurate = l = n = 1;
+	  leaf [0] = leaf [i];
+	  flagged [0] = 1;
+	  break;
+	}
       }
     }
   }
@@ -355,7 +354,6 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
     }
   }
 
-done:
   free (flagged);
   free (leaf);
   free (tmp);
