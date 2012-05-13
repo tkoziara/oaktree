@@ -724,7 +724,11 @@ static PyObject* POLYGON (PyObject *self, PyObject *args, PyObject *kwds)
       if (v[2] >= 0.0 && w[2] >= 0.0) /* outer hull */
       {
 	out->ptr = shape_combine (out->ptr, MUL, shape_copy (s_m));
-	if (head == NULL) head = item; /* list head must be a convex face */
+	if (head == NULL) head = item; /* list head may be on a convex face */
+      }
+      else if (v[2] >= 0.0 && w[2] < 0.0) /* concavity starts */
+      {
+	if (head == NULL) head = item; /* list head may be here as well (e.g. gears don't have convex faces) */
       }
 
       item = item->next;

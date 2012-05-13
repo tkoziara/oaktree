@@ -14,6 +14,4 @@ a = COPY (b)
 MOVE (a, (0, -1, 1.5))
 c = UNION (a, c)
 
-ROTATE (c, (0, 0, 0), (1, 1, 1), 45)
-
 SOLID (simu, c, "c")
