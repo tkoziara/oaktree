@@ -182,3 +182,50 @@ void render_elements (struct octree *octree)
     glEnd ();
   }
 }
+
+/* render nodes */
+void render_nodes (struct octree *octree)
+{
+  struct node **node;
+  REAL p [8][3], *x;
+  int i;
+
+  if (octree->down [0])
+  {
+    for (i = 0; i < 8; i ++) render_nodes (octree->down [i]);
+  }
+
+  if (octree->element)
+  {
+    node = octree->element->node;
+    x = octree->extents;
+
+    VECTOR (p[0], x[0], x[1], x[2]);
+    VECTOR (p[1], x[0], x[4], x[2]);
+    VECTOR (p[2], x[3], x[4], x[2]);
+    VECTOR (p[3], x[3], x[1], x[2]);
+    VECTOR (p[4], x[0], x[1], x[5]);
+    VECTOR (p[5], x[0], x[4], x[5]);
+    VECTOR (p[6], x[3], x[4], x[5]);
+    VECTOR (p[7], x[3], x[1], x[5]);
+
+    glPointSize (4.0);
+    glBegin (GL_POINTS);
+
+    for (i = 0; i < 8; i ++)
+    {
+      switch (node [i]->kind)
+      {
+      case 0: glColor3f (0, 0, 1); break;
+      case 2: glColor3f (0, 1, 0); break;
+      case 4: glColor3f (1, 0, 0); break;
+      default: glColor3f (0, 0, 0); break;
+      }
+
+      glVertex3f (p[i][0], p[i][1], p[i][2]);
+    }
+
+    glEnd ();
+    glPointSize (1.0);
+  }
+}

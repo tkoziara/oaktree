@@ -198,6 +198,120 @@ done:
   }
 }
 
+/* create single node */
+static struct node* node (struct node *n0, struct node *n1, struct node *n2, struct node *n3, struct node **list)
+{
+  struct node *node;
+
+  ERRMEM  (node = malloc (sizeof (struct node)));
+
+  node->node [0] = n0; 
+  node->node [1] = n1;
+  node->node [2] = n2;
+  node->node [3] = n3;
+
+  node->kind = 0;
+
+  if (n0) node->kind ++;
+  if (n1) node->kind ++;
+  if (n2) node->kind ++;
+  if (n3) node->kind ++;
+
+#if DEBUG
+  if (!(node->kind == 0 || node->kind == 2 || node->kind == 4))
+  {
+    fprintf (stderr, "Incorrect node kind, %d, !\n", node->kind);
+  }
+#endif
+
+  node->next = *list;
+  *list = node;
+
+  return node;
+}
+
+/* insert nodes */
+static void insert_nodes (struct octree *octree, struct solid *solid,
+  struct node *n0, struct node *n1, struct node *n2, struct node *n3,
+  struct node *n4, struct node *n5, struct node *n6, struct node *n7,
+  struct node **list)
+{
+  struct element *element = octree->element;
+
+  if (element && element->solid == solid)
+  {
+    if (!n0) n0 = node (NULL, NULL, NULL, NULL, list); /* can only happen from 0-level */
+    if (!n1) n1 = node (NULL, NULL, NULL, NULL, list);
+    if (!n2) n2 = node (NULL, NULL, NULL, NULL, list);
+    if (!n3) n3 = node (NULL, NULL, NULL, NULL, list);
+    if (!n4) n4 = node (NULL, NULL, NULL, NULL, list);
+    if (!n5) n5 = node (NULL, NULL, NULL, NULL, list);
+    if (!n6) n6 = node (NULL, NULL, NULL, NULL, list);
+    if (!n7) n7 = node (NULL, NULL, NULL, NULL, list);
+
+    element->node [0] = n0;
+    element->node [1] = n1;
+    element->node [2] = n2;
+    element->node [3] = n3;
+    element->node [4] = n4;
+    element->node [5] = n5;
+    element->node [6] = n6;
+    element->node [7] = n7;
+  }
+  else if (octree->down [0])
+  {
+
+    enum {O0=0x01, O1=0x02, O2=0x04, O3=0x08, O4=0x10, O5=0x20, O6=0x40, O7=0x80} code = 0x00;
+
+    if (octree->down [0]->element && octree->down [0]->element->solid == solid) code |= O0;
+    if (octree->down [1]->element && octree->down [1]->element->solid == solid) code |= O1;
+    if (octree->down [2]->element && octree->down [2]->element->solid == solid) code |= O2;
+    if (octree->down [3]->element && octree->down [3]->element->solid == solid) code |= O3;
+    if (octree->down [4]->element && octree->down [4]->element->solid == solid) code |= O4;
+    if (octree->down [5]->element && octree->down [5]->element->solid == solid) code |= O5;
+    if (octree->down [6]->element && octree->down [6]->element->solid == solid) code |= O6;
+    if (octree->down [7]->element && octree->down [7]->element->solid == solid) code |= O7;
+
+    struct node *n01 = (code & (O0|O1)) || (n0 && n1) ? node (n0, n1, NULL, NULL, list) : NULL,
+		*n12 = (code & (O1|O2)) || (n1 && n2) ? node (n1, n2, NULL, NULL, list) : NULL,
+		*n23 = (code & (O2|O3)) || (n2 && n3) ? node (n2, n3, NULL, NULL, list) : NULL,
+		*n30 = (code & (O0|O3)) || (n3 && n0) ? node (n3, n0, NULL, NULL, list) : NULL,
+		*n45 = (code & (O4|O5)) || (n4 && n5) ? node (n4, n5, NULL, NULL, list) : NULL,
+		*n56 = (code & (O5|O6)) || (n5 && n6) ? node (n5, n6, NULL, NULL, list) : NULL,
+		*n67 = (code & (O6|O7)) || (n6 && n7) ? node (n6, n7, NULL, NULL, list) : NULL,
+		*n74 = (code & (O7|O4)) || (n7 && n4) ? node (n7, n4, NULL, NULL, list) : NULL,
+		*n04 = (code & (O0|O4)) || (n0 && n4) ? node (n0, n4, NULL, NULL, list) : NULL,
+		*n15 = (code & (O1|O5)) || (n1 && n5) ? node (n1, n5, NULL, NULL, list) : NULL,
+		*n26 = (code & (O2|O6)) || (n2 && n6) ? node (n2, n6, NULL, NULL, list) : NULL,
+		*n37 = (code & (O3|O7)) || (n3 && n7) ? node (n3, n7, NULL, NULL, list) : NULL,
+		*n0123 = (code & (O0|O1|O2|O3)) || (n0 && n1 && n2 && n3) ? node (n0, n1, n2, n3, list) : NULL,
+		*n4567 = (code & (O4|O5|O6|O7)) || (n4 && n5 && n6 && n7) ? node (n4, n5, n6, n7, list) : NULL,
+		*n0145 = (code & (O0|O1|O4|O5)) || (n0 && n1 && n4 && n5) ? node (n0, n1, n4, n5, list) : NULL,
+		*n1256 = (code & (O1|O2|O5|O6)) || (n1 && n2 && n5 && n6) ? node (n1, n2, n5, n6, list) : NULL,
+		*n2367 = (code & (O2|O3|O6|O7)) || (n2 && n3 && n6 && n7) ? node (n2, n3, n6, n7, list) : NULL,
+		*n3074 = (code & (O3|O0|O7|O4)) || (n3 && n0 && n7 && n4) ? node (n3, n0, n7, n4, list) : NULL,
+		*mid = code ? node (NULL, NULL, NULL, NULL, list) : NULL;
+
+    if (!n0 && (code & O0)) n0 = node (NULL, NULL, NULL, NULL, list);
+    if (!n1 && (code & O1)) n1 = node (NULL, NULL, NULL, NULL, list);
+    if (!n2 && (code & O2)) n2 = node (NULL, NULL, NULL, NULL, list);
+    if (!n3 && (code & O3)) n3 = node (NULL, NULL, NULL, NULL, list);
+    if (!n4 && (code & O4)) n4 = node (NULL, NULL, NULL, NULL, list);
+    if (!n5 && (code & O5)) n5 = node (NULL, NULL, NULL, NULL, list);
+    if (!n6 && (code & O6)) n6 = node (NULL, NULL, NULL, NULL, list);
+    if (!n7 && (code & O7)) n7 = node (NULL, NULL, NULL, NULL, list);
+
+    insert_nodes (octree->down [0], solid, n0, n01, n0123, n30, n04, n0145, mid, n3074, list);
+    insert_nodes (octree->down [1], solid, n01, n1, n12, n0123, n0145, n15, n1256, mid, list);
+    insert_nodes (octree->down [2], solid, n0123, n12, n2, n23, mid, n1256, n26, n2367, list);
+    insert_nodes (octree->down [3], solid, n30, n0123, n23, n3, n3074, mid, n2367, n37, list);
+    insert_nodes (octree->down [4], solid, n04, n0145, mid, n3074, n4, n45, n4567, n74, list);
+    insert_nodes (octree->down [5], solid, n0145, n15, n1256, mid, n45, n5, n56, n4567, list);
+    insert_nodes (octree->down [6], solid, mid, n1256, n26, n2367, n4567, n56, n6, n67, list);
+    insert_nodes (octree->down [7], solid, n3074, mid, n2367, n37, n74, n4567, n67, n7, list);
+  }
+}
+
 /* create octree down to a cutoff edge length */
 struct octree* octree_create (REAL extents [6])
 {
@@ -211,7 +325,7 @@ struct octree* octree_create (REAL extents [6])
 }
 
 /* insert solid and refine octree down to a cutoff edge length */
-void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff)
+struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff)
 {
   REAL t [5][3][3], p [8][3], q [2][3], (*d) [8], (*s) [4][3], *x = octree->extents;
   int i, j, k, l, n, m, o, size;
@@ -244,7 +358,7 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
       octree->element = element;
     }
 
-    return;
+    goto done;
   }
   size = 128;
 
@@ -372,7 +486,7 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
   {
     if (!octree->down [0])
     {
-      if (q[1][0] <= cutoff && q[1][1] <= cutoff && q[1][2] <= cutoff) return;
+      if (q[1][0] <= cutoff && q[1][1] <= cutoff && q[1][2] <= cutoff) goto done;
 
       x = (REAL*) t;
 
@@ -419,6 +533,17 @@ void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutof
 
     for (i = 0; i < 8; i ++) octree_insert_solid (octree->down [i], solid, cutoff);
   }
+
+done:
+  if (!octree->up)
+  {
+    struct node *list = NULL;
+
+    insert_nodes (octree, solid, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, &list);
+
+    return list;
+  }
+  else return NULL;
 }
 
 /* free octree memory */

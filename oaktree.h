@@ -82,8 +82,19 @@ struct triang
   short n;
 };
 
+struct node
+{
+  struct node *node [4];
+
+  char kind;
+
+  struct node *next;
+};
+
 struct element
 {
+  struct node *node [8];
+
   struct triang *triang;
 
   struct solid *solid;
@@ -104,7 +115,7 @@ struct octree
 struct octree* octree_create (REAL extents [6]);
 
 /* insert solid and refine octree down to a cutoff edge length */
-void octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff);
+struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff);
 
 /* free octree memory */
 void octree_destroy (struct octree *octree);
@@ -124,6 +135,8 @@ struct simulation
   struct solid *solid;
 
   struct octree *octree;
+
+  struct node *node;
 
   struct simulation *prev, *next;
 };

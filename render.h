@@ -17,4 +17,7 @@ void render_solids (struct octree *octree);
 /* render elements */
 void render_elements (struct octree *octree);
 
+/* render nodes */
+void render_nodes (struct octree *octree);
+
 #endif

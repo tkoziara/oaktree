@@ -30,8 +30,8 @@ static int vieweron = 0, width = 512, height = 512;  /* viewer flag, initial win
 enum {MENU_SIMULATION = 0, MENU_RENDER, MENU_LAST}; /* menu identifiers */
 static char* menu_name [MENU_LAST];  /* menu names */
 static int menu_code [MENU_LAST]; /* menu codes */
-enum {SIMULATION_NEXT, SIMULATION_PREVIOUS, RENDER_SOLIDS, RENDER_ELEMENTS, RENDER_OCTREE}; /* menu items */
-static enum {SOLIDS = 0x01, ELEMENTS = 0x02, OCTREE = 0x04} render_item = SOLIDS|OCTREE; /* render item */
+enum {SIMULATION_NEXT, SIMULATION_PREVIOUS, RENDER_SOLIDS, RENDER_ELEMENTS, RENDER_NODES, RENDER_OCTREE}; /* menu items */
+static enum {SOLIDS = 0x01, ELEMENTS = 0x02, NODES = 0x04, OCTREE = 0x08} render_item = SOLIDS|OCTREE; /* render item */
 
 /* simulation menu callback */
 static void menu_simulation (int item)
@@ -62,6 +62,10 @@ static void menu_render (int item)
     if (render_item & ELEMENTS) render_item &= ~ELEMENTS;
     else render_item |= ELEMENTS;
     break;
+  case RENDER_NODES:
+    if (render_item & NODES) render_item &= ~NODES;
+    else render_item |= NODES;
+    break;
   case RENDER_OCTREE:
     if (render_item & OCTREE) render_item &= ~OCTREE;
     else render_item |= OCTREE;
@@ -85,6 +89,7 @@ static int  menu (char ***names, int **codes)
   menu_code [MENU_RENDER] = glutCreateMenu (menu_render);
   glutAddMenuEntry ("solids /s/", RENDER_SOLIDS);
   glutAddMenuEntry ("elements /e/", RENDER_ELEMENTS);
+  glutAddMenuEntry ("nodes /n/", RENDER_NODES);
   glutAddMenuEntry ("octree /o/", RENDER_OCTREE);
 
   *names = menu_name;
@@ -132,6 +137,13 @@ static void render ()
       if (render_item & SOLIDS) glDisable (GL_BLEND);
     }
 
+    if (render_item & NODES)
+    {
+      glDisable (GL_LIGHTING);
+      render_nodes (simulation->octree);
+      glEnable (GL_LIGHTING);
+    }
+
     if (render_item & OCTREE)
     {
       if (render_item & (SOLIDS|ELEMENTS))
@@ -166,6 +178,9 @@ static void key (int key, int x, int y)
   case 'e':
     menu_render (RENDER_ELEMENTS);
     break;
+  case 'n':
+    menu_render (RENDER_NODES);
+    break;
   case 'o':
     menu_render (RENDER_OCTREE);
     break;
@@ -196,6 +211,7 @@ static void passive (int x, int y)
 /* initialize simulation */
 static void initialize (struct simulation *simulation)
 {
+  struct node *list, *node;
   struct solid *solid;
   REAL e [6], g [6];
   struct timing t;
@@ -243,8 +259,20 @@ static void initialize (struct simulation *simulation)
 
   simulation->octree = octree_create (simulation->extents);
 
+  simulation->node = NULL;
+
   for (solid = simulation->solid; solid; solid = solid->next)
-    octree_insert_solid (simulation->octree, solid, simulation->cutoff);
+  {
+    list = octree_insert_solid (simulation->octree, solid, simulation->cutoff);
+
+    for (node = list; node && node->next; node = node->next);
+
+    if (node)
+    {
+      node->next = simulation->node;
+      simulation->node = list;
+    }
+  }
 
   dt = timerend (&t);
 
