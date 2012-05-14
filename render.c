@@ -214,13 +214,9 @@ void render_nodes (struct octree *octree)
 
     for (i = 0; i < 8; i ++)
     {
-      switch (node [i]->kind)
-      {
-      case 0: glColor3f (0, 0, 1); break;
-      case 2: glColor3f (0, 1, 0); break;
-      case 4: glColor3f (1, 0, 0); break;
-      default: glColor3f (0, 0, 0); break;
-      }
+      if (node [i]->hanging)
+        glColor3f (1, 0, 0);
+      else glColor3f (0, 0, 1);
 
       glVertex3f (p[i][0], p[i][1], p[i][2]);
     }

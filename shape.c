@@ -20,7 +20,7 @@ static int shape_leaves_count (struct shape *shape)
   case MUL:
     return shape_leaves_count (shape->left) + shape_leaves_count (shape->right);
     break;
-  case HPL:
+  case HSP:
   case SPH:
   case CYL:
     return 1;
@@ -33,7 +33,7 @@ static int shape_leaves_count (struct shape *shape)
 /* output shape leaves overlapping (c,r) sphere and return their count */
 static void shape_leaves_with_counter (struct shape *shape, REAL c [3], REAL r, struct shape **leaves, int *i)
 {
-  struct halfplane *halfplane;
+  struct halfspace *halfspace;
   struct cylinder *cylinder;
   struct sphere *sphere;
   REAL d [4];
@@ -74,14 +74,14 @@ static void shape_leaves_with_counter (struct shape *shape, REAL c [3], REAL r, 
     else shape_leaves_with_counter (shape->right, c, r, leaves, i);
 
     break;
-  case HPL:
-    halfplane = shape->data;
-    SUB (c, halfplane->p, d);
-    d [3] = r + halfplane->r;
+  case HSP:
+    halfspace = shape->data;
+    SUB (c, halfspace->p, d);
+    d [3] = r + halfspace->r;
 
     if (DOT (d, d) <= d[3]*d[3])
     {
-      d [3] = DOT (halfplane->n, d);
+      d [3] = DOT (halfspace->n, d);
 
       if (fabs (d[3]) <= r)
       {
@@ -123,9 +123,9 @@ static int compare_leaves (struct shape **ll, struct shape **rr)
   else if ((*ll)->what > (*rr)->what) return 1;
   else switch ((*ll)->what)
   {
-    case HPL:
+    case HSP:
     {
-      struct halfplane *l = (*ll)->data, *r = (*rr)->data;
+      struct halfspace *l = (*ll)->data, *r = (*rr)->data;
 
       u = l->n[0] - r->n[0];
       if (fabs (u) < 1E-10) /* fine <= normalized */
@@ -224,9 +224,9 @@ static int subtracted (struct shape *shape)
   case ADD:
   case MUL:
     return subtracted (shape->left) && subtracted (shape->right);
-  case HPL:
+  case HSP:
     {
-      struct halfplane *data = shape->data;
+      struct halfspace *data = shape->data;
 
       return data->s == -1;
     }
@@ -266,13 +266,13 @@ struct shape* shape_copy (struct shape *shape)
     copy->left = shape_copy (shape->left);
     copy->right = shape_copy (shape->right);
     break;
-  case HPL:
+  case HSP:
     {
-      struct halfplane *data;
+      struct halfspace *data;
 
-      ERRMEM (data = malloc (sizeof (struct halfplane)));
+      ERRMEM (data = malloc (sizeof (struct halfspace)));
 
-      memcpy (data, shape->data, sizeof (struct halfplane));
+      memcpy (data, shape->data, sizeof (struct halfspace));
       copy->data = data;
     }
     break;
@@ -318,9 +318,9 @@ struct shape* shape_invert (struct shape *shape)
     shape_invert (shape->left);
     shape_invert (shape->right);
     break;
-  case HPL:
+  case HSP:
     {
-      struct halfplane *data = shape->data;
+      struct halfspace *data = shape->data;
 
       data->s *= -1.0;
     }
@@ -368,9 +368,9 @@ void shape_move (struct shape *shape, REAL *vector)
     shape_move (shape->left, vector);
     shape_move (shape->right, vector);
     break;
-  case HPL:
+  case HSP:
     {
-      struct halfplane *data = shape->data;
+      struct halfspace *data = shape->data;
 
       ACC (vector, data->p);
     }
@@ -404,9 +404,9 @@ void shape_rotate (struct shape *shape, REAL *point, REAL *matrix)
     shape_rotate (shape->left, point, matrix);
     shape_rotate (shape->right, point, matrix);
     break;
-  case HPL:
+  case HSP:
     {
-      struct halfplane *data = shape->data;
+      struct halfspace *data = shape->data;
 
       SUB (data->p, point, v);
       NVADDMUL (point, matrix, v, data->p);
@@ -438,7 +438,7 @@ void shape_rotate (struct shape *shape, REAL *point, REAL *matrix)
 /* return distance to shape at given point, together with normal and color */
 REAL shape_evaluate (struct shape *shape, REAL *point)
 {
-  struct halfplane *halfplane;
+  struct halfspace *halfspace;
   struct cylinder *cylinder;
   struct sphere *sphere;
   REAL a, b, v, z [3];
@@ -455,10 +455,10 @@ REAL shape_evaluate (struct shape *shape, REAL *point)
     b = shape_evaluate (shape->right, point);
     v = MAX (a, b);
     break;
-  case HPL:
-    halfplane = shape->data;
-    SUB (point, halfplane->p, z);
-    v = halfplane->s * DOT (z, halfplane->n);
+  case HSP:
+    halfspace = shape->data;
+    SUB (point, halfspace->p, z);
+    v = halfspace->s * DOT (z, halfspace->n);
     break;
   case SPH:
     sphere = shape->data;
@@ -484,7 +484,7 @@ REAL shape_evaluate (struct shape *shape, REAL *point)
 REAL shape_normal (struct shape *shape, REAL *point, REAL *normal)
 {
   REAL l [3], r [3], z [3], a, b, sq, v;
-  struct halfplane *halfplane;
+  struct halfspace *halfspace;
   struct cylinder *cylinder;
   struct sphere *sphere;
 
@@ -504,11 +504,11 @@ REAL shape_normal (struct shape *shape, REAL *point, REAL *normal)
     if (a > b) { COPY (l, normal); }
     else { COPY (r, normal); }
     break;
-  case HPL:
-    halfplane = shape->data;
-    SUB (point, halfplane->p, z);
-    v = halfplane->s * DOT (z, halfplane->n);
-    MUL (halfplane->n, halfplane->s, normal);
+  case HSP:
+    halfspace = shape->data;
+    SUB (point, halfspace->p, z);
+    v = halfspace->s * DOT (z, halfspace->n);
+    MUL (halfspace->n, halfspace->s, normal);
     break;
   case SPH:
     sphere = shape->data;
@@ -542,17 +542,13 @@ int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape *
   int i, j, k, n;
   REAL v;
  
-  *inside = 0;
-
   v = shape_evaluate (shape, c);
+
+  *inside = v < 0.0;
 
   if (v > r) return 0; /* outward distance filter */
 
-  if (v < -r)
-  {
-    *inside = 1;
-    return 0; /* inward distance filter */
-  }
+  if (v < -r) return 0; /* inward distance filter */
 
   n = shape_leaves_count (shape);
 
@@ -584,7 +580,7 @@ int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape *
 /* compute shape extents */
 void shape_extents (struct shape *shape, REAL *extents)
 {
-  struct halfplane *halfplane;
+  struct halfspace *halfspace;
   struct sphere *sphere;
   REAL l [6], r [6];
 
@@ -615,14 +611,14 @@ void shape_extents (struct shape *shape, REAL *extents)
       else extents[5] = r[5];
     }
     break;
-  case HPL:
-    halfplane = shape->data;
-    extents [0] = halfplane->p[0] - halfplane->r;
-    extents [1] = halfplane->p[1] - halfplane->r;
-    extents [2] = halfplane->p[2] - halfplane->r;
-    extents [3] = halfplane->p[0] + halfplane->r;
-    extents [4] = halfplane->p[1] + halfplane->r;
-    extents [5] = halfplane->p[2] + halfplane->r;
+  case HSP:
+    halfspace = shape->data;
+    extents [0] = halfspace->p[0] - halfspace->r;
+    extents [1] = halfspace->p[1] - halfspace->r;
+    extents [2] = halfspace->p[2] - halfspace->r;
+    extents [3] = halfspace->p[0] + halfspace->r;
+    extents [4] = halfspace->p[1] + halfspace->r;
+    extents [5] = halfspace->p[2] + halfspace->r;
     break;
   case SPH:
     sphere = shape->data;
@@ -655,7 +651,7 @@ void shape_destroy (struct shape *shape)
     shape_destroy (shape->left);
     shape_destroy (shape->right);
     break;
-  case HPL:
+  case HSP:
   case SPH:
   case CYL:
     free (shape->data);

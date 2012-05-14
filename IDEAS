@@ -1,3 +1,9 @@
+Issues:
+#######
+
+Union of two cubes along flat faces => internal surfaces are left in triangulation (perturbation criterion fails here).
+Also two layers of overlapping internal triangles are created since discrimination of repeated surfaces does not work (sign difference).
+
 Needed:
 #######
 

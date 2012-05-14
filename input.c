@@ -429,7 +429,7 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
 {
   KEYWORDS ("base", "h", "r", "scolor");
   struct shape *sa, *sb, *sc;
-  struct halfplane *a, *b;
+  struct halfspace *a, *b;
   PyObject *base, *scolor;
   struct cylinder *c;
   double r, h;
@@ -445,7 +445,7 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
     TYPETEST (is_tuple (base, kwl[0], 3) && is_positive (h, kwl[1]) && is_positive (r, kwl[2]) && is_tuple (scolor, kwl[4], 3));
 
     ERRMEM (sa = calloc (1, sizeof (struct shape)));
-    ERRMEM (a = malloc (sizeof (struct halfplane)));
+    ERRMEM (a = malloc (sizeof (struct halfspace)));
 
     a->p [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (base, 0));
     a->p [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (base, 1));
@@ -454,18 +454,18 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
     a->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
     a->r = r;
     a->s = 1.0;
-    sa->what = HPL;
+    sa->what = HSP;
     sa->data = a;
 
     ERRMEM (sb = calloc (1, sizeof (struct shape)));
-    ERRMEM (b = malloc (sizeof (struct halfplane)));
+    ERRMEM (b = malloc (sizeof (struct halfspace)));
 
     VECTOR (b->p, a->p[0], a->p[1], a->p[2]+h);
     VECTOR (b->n, 0, 0, 1);
     b->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
     b->r = r;
     b->s = 1.0;
-    sb->what = HPL;
+    sb->what = HSP;
     sb->data = b;
 
     ERRMEM (sc = calloc (1, sizeof (struct shape)));
@@ -492,7 +492,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
   KEYWORDS ("corner", "u", "v", "w", "scolor");
   struct shape *shape, *a, *b, *c, *d, *e, *f;
   PyObject *corner, *scolor;
-  struct halfplane *h;
+  struct halfspace *h;
   double u, v, w;
   double p [3];
   SHAPE *out;
@@ -513,69 +513,69 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
 
     /* -1, 0, 0 */
     ERRMEM (a = calloc (1, sizeof (struct shape)));
-    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    ERRMEM (h = malloc (sizeof (struct halfspace)));
     VECTOR (h->p, p[0], p[1]+0.5*v, p[2]+0.5*w);
     VECTOR (h->n, -1, 0, 0);
     h->r = ALG_SQR2 * MAX (v, w) / 2.;
     h->s = 1.0;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
-    a->what = HPL;
+    a->what = HSP;
     a->data = h;
 
    /* 0, -1, 0 */
     ERRMEM (b = calloc (1, sizeof (struct shape)));
-    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    ERRMEM (h = malloc (sizeof (struct halfspace)));
     VECTOR (h->p, p[0]+0.5*u, p[1], p[2]+0.5*w);
     VECTOR (h->n, 0, -1, 0);
     h->r = ALG_SQR2 * MAX (u, w) / 2.;
     h->s = 1.0;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
-    b->what = HPL;
+    b->what = HSP;
     b->data = h;
 
     /* 0, 0, -1 */
     ERRMEM (c = calloc (1, sizeof (struct shape)));
-    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    ERRMEM (h = malloc (sizeof (struct halfspace)));
     VECTOR (h->p, p[0]+0.5*u, p[1]+0.5*v, p[2]);
     VECTOR (h->n, 0, 0, -1);
     h->r = ALG_SQR2 * MAX (u, v) / 2.;
     h->s = 1.0;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
-    c->what = HPL;
+    c->what = HSP;
     c->data = h;
 
     /* 1, 0, 0 */
     ERRMEM (d = calloc (1, sizeof (struct shape)));
-    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    ERRMEM (h = malloc (sizeof (struct halfspace)));
     VECTOR (h->p, p[0]+u, p[1]+0.5*v, p[2]+0.5*w);
     VECTOR (h->n, 1, 0, 0);
     h->r = ALG_SQR2 * MAX (v, w) / 2.;
     h->s = 1.0;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 3));
-    d->what = HPL;
+    d->what = HSP;
     d->data = h;
 
    /* 0, 1, 0 */
     ERRMEM (e = calloc (1, sizeof (struct shape)));
-    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    ERRMEM (h = malloc (sizeof (struct halfspace)));
     VECTOR (h->p, p[0]+0.5*u, p[1]+v, p[2]+0.5*w);
     VECTOR (h->n, 0, 1, 0);
     h->r = ALG_SQR2 * MAX (u, w) / 2.;
     h->s = 1.0;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 4));
-    e->what = HPL;
+    e->what = HSP;
     e->data = h;
 
     /* 0, 0, 1 */
     ERRMEM (f = calloc (1, sizeof (struct shape)));
-    ERRMEM (h = malloc (sizeof (struct halfplane)));
+    ERRMEM (h = malloc (sizeof (struct halfspace)));
     VECTOR (h->p, p[0], p[1], p[2]+w);
     VECTOR (h->p, p[0]+0.5*u, p[1]+0.5*v, p[2]+w);
     VECTOR (h->n, 0, 0, 1);
     h->r = ALG_SQR2 * MAX (u, v) / 2.;
     h->s = 1.0;
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 5));
-    f->what = HPL;
+    f->what = HSP;
     f->data = h;
 
     shape = shape_combine (shape_combine (shape_combine (a, MUL, d), MUL, shape_combine (b, MUL, e)), MUL, shape_combine (c, MUL, f));
@@ -591,7 +591,7 @@ static PyObject* POLYGON (PyObject *self, PyObject *args, PyObject *kwds)
 {
   KEYWORDS ("polygon", "h", "scolor");
   PyObject *polygon, *scolor;
-  struct halfplane *a;
+  struct halfspace *a;
   struct shape **s;
   double h;
   int i, n;
@@ -628,8 +628,8 @@ static PyObject* POLYGON (PyObject *self, PyObject *args, PyObject *kwds)
       if (p[1] > e[4]) e[4] = p[1];
 
       ERRMEM (s [i+1] = calloc (1, sizeof (struct shape)));
-      ERRMEM (a = malloc (sizeof (struct halfplane)));
-      s [i+1]->what = HPL;
+      ERRMEM (a = malloc (sizeof (struct halfspace)));
+      s [i+1]->what = HSP;
       s [i+1]->data = a;
 
       SUB (q, p, v);
@@ -645,8 +645,8 @@ static PyObject* POLYGON (PyObject *self, PyObject *args, PyObject *kwds)
 
     /* base */
     ERRMEM (s [0] = calloc (1, sizeof (struct shape)));
-    ERRMEM (a = malloc (sizeof (struct halfplane)));
-    s [0]->what = HPL;
+    ERRMEM (a = malloc (sizeof (struct halfspace)));
+    s [0]->what = HSP;
     s [0]->data = a;
 
     MID (e, e+3, a->p);
@@ -658,8 +658,8 @@ static PyObject* POLYGON (PyObject *self, PyObject *args, PyObject *kwds)
 
     /* top */
     ERRMEM (s [n+1] = calloc (1, sizeof (struct shape)));
-    ERRMEM (a = malloc (sizeof (struct halfplane)));
-    s [n+1]->what = HPL;
+    ERRMEM (a = malloc (sizeof (struct halfspace)));
+    s [n+1]->what = HSP;
     s [n+1]->data = a;
 
     MID (e, e+3, a->p); a->p [2] += h;
@@ -679,7 +679,7 @@ static PyObject* POLYGON (PyObject *self, PyObject *args, PyObject *kwds)
 
     struct shape *s_l, *s_m, *s_r, *conc;
     struct list *list, *head, *item;
-    struct halfplane *l, *m, *r;
+    struct halfspace *l, *m, *r;
 
     ERRMEM (list = malloc (n * sizeof (struct list)));
 

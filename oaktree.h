@@ -6,7 +6,7 @@
 #ifndef __oaktree__
 #define __oaktree__
 
-struct halfplane
+struct halfspace
 {
   REAL p [3], n [3], r, s;
 
@@ -29,7 +29,7 @@ struct cylinder
 
 struct shape
 {
-  enum {ADD, MUL, HPL, SPH, CYL} what;
+  enum {ADD, MUL, HSP, SPH, CYL} what;
 
   void *data;
 
@@ -84,9 +84,7 @@ struct triang
 
 struct node
 {
-  struct node *node [4];
-
-  char kind;
+  unsigned char hanging;
 
   struct node *next;
 };
