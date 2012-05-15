@@ -40,9 +40,11 @@ static void menu_simulation (int item)
   {
   case SIMULATION_NEXT:
     if (simulation->next) simulation = simulation->next;
+    viewer_update_extents (simulation->extents);
     break;
   case SIMULATION_PREVIOUS:
     if (simulation->prev) simulation = simulation->prev;
+    viewer_update_extents (simulation->extents);
     break;
   }
 
@@ -276,7 +278,7 @@ static void initialize (struct simulation *simulation)
 
   dt = timerend (&t);
 
-  printf ("Simulation initialized in %g s.\n", dt);
+  printf ("Simulation [%s] initialized in %g s.\n", simulation->outpath, dt);
 }
 
 /* run simulation */
