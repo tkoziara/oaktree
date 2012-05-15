@@ -265,6 +265,8 @@ struct shape* shape_copy (struct shape *shape)
   case MUL:
     copy->left = shape_copy (shape->left);
     copy->right = shape_copy (shape->right);
+    copy->left->up = copy;
+    copy->right->up = copy;
     break;
   case HSP:
     {
@@ -354,6 +356,8 @@ struct shape* shape_combine (struct shape *left, short what, struct shape *right
   shape->what = what;
   shape->left = left;
   shape->right = right;
+  left->up = shape;
+  right->up = shape;
 
   return shape;
 }
@@ -535,48 +539,6 @@ REAL shape_normal (struct shape *shape, REAL *point, REAL *normal)
   return v;
 }
 
-/* output unique shape leaves overlapping (c,r) sphere and return their count or inside flag if count is zero */
-int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves, int *inside)
-{
-  struct shape **leaf;
-  int i, j, k, n;
-  REAL v;
- 
-  v = shape_evaluate (shape, c);
-
-  *inside = v < 0.0;
-
-  if (v > r) return 0; /* outward distance filter */
-
-  if (v < -r) return 0; /* inward distance filter */
-
-  n = shape_leaves_count (shape);
-
-  ERRMEM ((*leaves) = leaf = malloc (n * sizeof (struct shape*)));
-
-  i = 0;
-
-  shape_leaves_with_counter (shape, c, r, leaf, &i);
-
-  if (i <= 1) return i;
-
-  qsort (leaf, i, sizeof (struct shape*), (int (*) (const void*, const void*)) compare_leaves);
-
-  for (j = 0, k = 1; k < i; )
-  {
-    while (k < i && compare_leaves (&leaf[j], &leaf[k]) == 0) k ++;
-
-    if (k < i)
-    {
-      leaf [j+1] = leaf [k];
-      j ++;
-      k ++;
-    }
-  }
-
-  return j+1;
-}
-
 /* compute shape extents */
 void shape_extents (struct shape *shape, REAL *extents)
 {
@@ -639,6 +601,61 @@ void shape_extents (struct shape *shape, REAL *extents)
     extents [5] = -FLT_MAX;
     break;
   }
+}
+
+/* output unique shape leaves overlapping (c,r) sphere and return their count or inside flag if count is zero */
+int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves, char *inside)
+{
+  struct shape **leaf;
+  int i, j, k, n;
+  REAL v;
+ 
+  v = shape_evaluate (shape, c);
+
+  *inside = v < 0.0;
+
+  if (v > r) return 0; /* outward distance filter */
+
+  if (v < -r) return 0; /* inward distance filter */
+
+  n = shape_leaves_count (shape);
+
+  ERRMEM ((*leaves) = leaf = malloc (n * sizeof (struct shape*)));
+
+  i = 0;
+
+  shape_leaves_with_counter (shape, c, r, leaf, &i);
+
+  if (i <= 1) return i;
+
+  qsort (leaf, i, sizeof (struct shape*), (int (*) (const void*, const void*)) compare_leaves);
+
+  for (j = 0, k = 1; k < i; )
+  {
+    while (k < i && compare_leaves (&leaf[j], &leaf[k]) == 0) k ++;
+
+    if (k < i)
+    {
+      leaf [j+1] = leaf [k];
+      j ++;
+      k ++;
+    }
+  }
+
+  return j+1;
+}
+
+/* test whether the leaf is in a union of shapes */
+int shape_leaf_in_union (struct shape *leaf)
+{
+  if (subtracted (leaf)) /* skip subtracted branch */
+  {
+    do {leaf = leaf->up; } while (leaf && leaf->what == ADD);
+  }
+
+  while (leaf && leaf->what != ADD) leaf = leaf->up;
+
+  return leaf ? 1 : 0;
 }
 
 /* free shape memory */

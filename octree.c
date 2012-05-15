@@ -62,16 +62,26 @@ static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k,
     else cutoff *= ALG_SQR2; /* relaxed test for curved surfaces (cutoff**3 cube has sqrt(2)*cutoff diameter) XXX */
 
     SUBMUL (d, cutoff, n, d);
-
     v = shape_evaluate (shape, d);
-
     if (v < 0.0 && fabs (cutoff + v) < cutoff) /* inside but not too deep */
     {
-      COPY (t[0], (*out) [*m][0]);
-      COPY (t[1], (*out) [*m][1]);
-      COPY (t[2], (*out) [*m][2]);
-      COPY (n, (*out) [*m][3]);
-      (*m) ++;
+      i = 1;
+
+      if (shape_leaf_in_union (src)) /* unions may produce internal boundaries (0-levels) */
+      {                              /* in this case we also test positive perturbation */
+	ADDMUL (d, 2.0*cutoff, n, d);
+	v = shape_evaluate (shape, d);
+	i = (v > 0.0 && fabs (cutoff - v) < cutoff); /* outside but not too far */
+      }
+
+      if (i)
+      {
+	COPY (t[0], (*out) [*m][0]);
+	COPY (t[1], (*out) [*m][1]);
+	COPY (t[2], (*out) [*m][2]);
+	COPY (n, (*out) [*m][3]);
+	(*m) ++;
+      }
     }
   }
   else
@@ -406,8 +416,8 @@ struct octree* octree_create (REAL extents [6])
 struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff)
 {
   REAL t [5][3][3], p [8][3], q [2][3], (*d) [8], (*s) [4][3], *x = octree->extents;
-  int i, j, k, l, n, m, o, size, inside;
-  char allaccurate, *flagged;
+  char allaccurate, inside, inunion, *flagged;
+  int i, j, k, l, n, m, o, size;
   struct shape **leaf, **tmp;
   struct element *element;
   struct triang *triang;
@@ -447,6 +457,7 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
 
   allaccurate = 1;
   triang = NULL;
+  inunion = 0;
 
   for (l = i = 0; i < n; i ++)
   {
@@ -460,6 +471,7 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
     {
       if (d [i][0] * d [i][j] <= 0.0) /* contains 0-isosurface */
       {
+	if (shape_leaf_in_union (leaf[i])) inunion = 1;
 	flagged [i] = 1;
 	l ++;
 	break;
@@ -469,23 +481,23 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
 
   /* will just one primitive do ? */
 
-  if (l > 1)
-  {
-    REAL z [8], w, v;
+  if (l > 1 && inunion) /* if primitives come from shape unions they may produce unnecessary splits of boundary triangles */
+  {                     /* thus we do this additional and costly test only if unions were found on the way to primitives */
+    x = (REAL*)t;
 
-    for (j = 0; j < 8; j ++)  z [j] = shape_evaluate (solid->shape, p[j]); /* sample shape */
+    for (j = 0; j < 8; j ++)  x [j] = shape_evaluate (solid->shape, p[j]); /* sample shape */
 
     for (i = 0; i < n; i ++)
     {
       if (flagged [i]) /* for flagged primitives */
       {
-	for (w = 0, j = 0; j < 8; j ++)
+	for (x[8] = 0, j = 0; j < 8; j ++)
 	{
-          v = d[i][j] - z[j];
-	  w += fabs (v);  /* compute difference between primitive and shape */
+          x[9] = d[i][j] - x[j];
+	  x[8] += fabs (x[9]);  /* compute difference between primitive and shape */
 	}
 
-	if (w < cutoff) /* if small enough, use only this primitive */
+	if (x[8] < cutoff) /* if small enough, use only this primitive */
 	{
 	  for (j = 0; j < 8; j ++) d[0][j] = d[i][j];
 	  allaccurate = l = n = 1;

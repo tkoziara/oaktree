@@ -33,7 +33,7 @@ struct shape
 
   void *data;
 
-  struct shape *left, *right;
+  struct shape *up, *left, *right;
 };
 
 /* copy shape */
@@ -57,11 +57,14 @@ REAL shape_evaluate (struct shape *shape, REAL *point);
 /* return value and compute shape normal at given point */
 REAL shape_normal (struct shape *shape, REAL *point, REAL *normal);
 
-/* output unique shape leaves overlapping (c,r) sphere and return their count or inside flag if count is zero */
-int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves, int *inside);
-
 /* compute shape extents */
 void shape_extents (struct shape *shape, REAL *extents);
+
+/* output unique shape leaves overlapping (c,r) sphere and return their count or inside flag if count is zero */
+int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves, char *inside);
+
+/* test whether the leaf is in a union of shapes */
+int shape_leaf_in_union (struct shape *leaf);
 
 /* free shape memory */
 void shape_destroy (struct shape *shape);
