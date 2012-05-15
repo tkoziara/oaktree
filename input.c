@@ -336,25 +336,40 @@ static int is_solid (SOLID *obj, char *var)
 /* constructor */
 static PyObject* SOLID_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-  KEYWORDS ("simu", "shape", "label");
+  KEYWORDS ("simu", "shape", "label", "grid");
   struct solid *solid;
   SIMULATION *simu;
   PyObject *label;
   SHAPE *shape;
+  double grid;
   SOLID *self;
 
   self = (SOLID*)type->tp_alloc (type, 0);
 
   if (self)
   {
-    PARSEKEYS ("OOO", &simu, &shape, &label);
+    grid = FLT_MAX;
+    label = NULL;
 
-    TYPETEST (is_simulation (simu, kwl[0]) && is_shape (shape, kwl[1]) && is_string (label, kwl[2]));
+    PARSEKEYS ("OO|Od", &simu, &shape, &label, &grid);
 
-    ERRMEM (solid = malloc (sizeof (struct solid)));
+    TYPETEST (is_simulation (simu, kwl[0]) && is_shape (shape, kwl[1]) &&
+	      is_string (label, kwl[2]) && is_positive (grid, kwl[3]));
+
+    if (grid <= simu->ptr->cutoff)
+    {
+      PyErr_SetString (PyExc_RuntimeError, "Grid size must be larger than simulation cutoff!");
+      return NULL;
+    }
+
+    ERRMEM (solid = calloc (1, sizeof (struct solid)));
     solid->shape = shape_copy (shape->ptr);
-    ERRMEM (solid->label = malloc (strlen (PyString_AsString (label)) + 1));
-    strcpy (solid->label, PyString_AsString (label));
+    if (label)
+    {
+      ERRMEM (solid->label = malloc (strlen (PyString_AsString (label)) + 1));
+      strcpy (solid->label, PyString_AsString (label));
+    }
+    solid->grid = grid;
 
     if (simu->ptr->solid) simu->ptr->solid->prev = solid;
     solid->next = simu->ptr->solid;

@@ -934,7 +934,7 @@ A solid is created in a simulation.
 \end_layout
 
 \begin_layout Subsection*
-obj = SOLID (simu, shape, label)
+obj = SOLID (simu, shape | label, grid)
 \end_layout
 
 \begin_layout Itemize
@@ -966,7 +966,15 @@ shape
 \series bold
 label
 \series default
- - solid label
+ - solid label (default: none)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+grid
+\series default
+ - maximal finite element grid size for this solid (default: none)
 \end_layout
 
 \begin_layout Standard

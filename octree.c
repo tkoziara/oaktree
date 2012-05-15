@@ -413,10 +413,10 @@ struct octree* octree_create (REAL extents [6])
 }
 
 /* insert solid and refine octree down to a cutoff edge length */
-struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff)
+struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL grid, REAL cutoff)
 {
   REAL t [5][3][3], p [8][3], q [2][3], (*d) [8], (*s) [4][3], *x = octree->extents;
-  char allaccurate, inside, inunion, *flagged;
+  char allaccurate, inside, *flagged;
   int i, j, k, l, n, m, o, size;
   struct shape **leaf, **tmp;
   struct element *element;
@@ -433,6 +433,8 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
 
   MID (p[0], p[6], q[0]);
   SUB (q[0], p[0], q[1]);
+
+  if (q[1][0] > grid) goto recurse; /* assumption of cubic octants */
 
   n = shape_unique_leaves (solid->shape, q[0], LEN (q[1]), &leaf, &inside);
   if (n == 0)
@@ -457,7 +459,6 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
 
   allaccurate = 1;
   triang = NULL;
-  inunion = 0;
 
   for (l = i = 0; i < n; i ++)
   {
@@ -471,7 +472,6 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
     {
       if (d [i][0] * d [i][j] <= 0.0) /* contains 0-isosurface */
       {
-	if (shape_leaf_in_union (leaf[i])) inunion = 1;
 	flagged [i] = 1;
 	l ++;
 	break;
@@ -479,10 +479,12 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
     }
   }
 
-  /* will just one primitive do ? */
+  /* recurse down the tree if too many leaves */
 
-  if (l > 1 && inunion) /* if primitives come from shape unions they may produce unnecessary splits of boundary triangles */
-  {                     /* thus we do this additional and costly test only if unions were found on the way to primitives */
+  if (allaccurate && l > 4) allaccurate = 0; /* 4 is arbitrary XXX */
+
+  else if (l > 1) /* test if just one primitive would do */
+  {
     x = (REAL*)t;
 
     for (j = 0; j < 8; j ++)  x [j] = shape_evaluate (solid->shape, p[j]); /* sample shape */
@@ -508,10 +510,6 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
       }
     }
   }
-
-  /* recurse down the tree if too many leaves */
-
-  if (allaccurate && l > 8) allaccurate = 0; /* 8 is arbitrary XXX */
 
   /* if all leaves are accorate extract triangles */
 
@@ -574,9 +572,10 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
   }
   else if (!allaccurate) /* not enough accuracy */
   {
+recurse:
     if (!octree->down [0])
     {
-      if (q[1][0] <= cutoff && q[1][1] <= cutoff && q[1][2] <= cutoff) goto done;
+      if (q[1][0] <= cutoff) goto done; /* assumption of cubic octants */
 
       x = (REAL*) t;
 
@@ -621,7 +620,7 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
       octree->down [7]->up = octree;
     }
 
-    for (i = 0; i < 8; i ++) octree_insert_solid (octree->down [i], solid, cutoff);
+    for (i = 0; i < 8; i ++) octree_insert_solid (octree->down [i], solid, grid, cutoff);
   }
 
 done:

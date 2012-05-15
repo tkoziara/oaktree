@@ -16,4 +16,4 @@ c = DIFFERENCE (c, a)
 a = SPHERE ((0, 0, 1), 0.5, 1)
 c = DIFFERENCE (c, a)
 
-SOLID (simu, c, "c")
+SOLID (simu, c)

@@ -10,4 +10,4 @@ ROTATE (pipe, (0.5*width, 0.5*width, 0.5*width), (1, 1, 1), 15)
 
 well = DIFFERENCE (cube, pipe)
 
-SOLID (simu, well, 'well')
+SOLID (simu, well)
