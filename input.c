@@ -505,7 +505,7 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
 static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
 {
   KEYWORDS ("corner", "u", "v", "w", "scolor");
-  struct shape *shape, *a, *b, *c, *d, *e, *f;
+  struct shape *a, *b, *c, *d, *e, *f;
   PyObject *corner, *scolor;
   struct halfspace *h;
   double u, v, w;
@@ -592,10 +592,8 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 5));
     f->what = HSP;
     f->data = h;
-
-    shape = shape_combine (shape_combine (shape_combine (a, MUL, d), MUL, shape_combine (b, MUL, e)), MUL, shape_combine (c, MUL, f));
-
-    out->ptr = shape;
+    
+    out->ptr = shape_combine (shape_combine (shape_combine (a, MUL, d), MUL, shape_combine (b, MUL, e)), MUL, shape_combine (c, MUL, f));
   }
 
   return (PyObject*)out;

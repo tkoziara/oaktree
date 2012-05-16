@@ -453,11 +453,19 @@ REAL shape_evaluate (struct shape *shape, REAL *point)
     a = shape_evaluate (shape->left, point);
     b = shape_evaluate (shape->right, point);
     v = MIN (a, b);
+#if 0
+    if (a > r || b > r) v = MIN (a, b);
+    else v = r - sqrt((a-r)*(a-r)+(b-r)*(b-r));
+#endif
     break;
   case MUL:
     a = shape_evaluate (shape->left, point);
     b = shape_evaluate (shape->right, point);
     v = MAX (a, b);
+#if 0
+    if (a < -r || b < -r) v = MAX (a, b);
+    else v = sqrt((a+r)*(a+r)+(b+r)*(b+r)) - r;
+#endif
     break;
   case HSP:
     halfspace = shape->data;

@@ -479,11 +479,7 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
     }
   }
 
-  /* recurse down the tree if too many leaves */
-
-  if (allaccurate && l > 4) allaccurate = 0; /* 4 is arbitrary XXX */
-
-  else if (l > 1) /* test if just one primitive would do */
+  if (l > 1) /* test if just one leaf would do */
   {
     x = (REAL*)t;
 
@@ -491,15 +487,15 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
 
     for (i = 0; i < n; i ++)
     {
-      if (flagged [i]) /* for flagged primitives */
+      if (flagged [i]) /* for flagged leaves */
       {
 	for (x[8] = 0, j = 0; j < 8; j ++)
 	{
           x[9] = d[i][j] - x[j];
-	  x[8] += fabs (x[9]);  /* compute difference between primitive and shape */
+	  x[8] += fabs (x[9]);  /* compute difference between leaf and shape */
 	}
 
-	if (x[8] < cutoff) /* if small enough, use only this primitive */
+	if (x[8] < cutoff) /* if small enough, use only this leaf */
 	{
 	  for (j = 0; j < 8; j ++) d[0][j] = d[i][j];
 	  allaccurate = l = n = 1;
@@ -510,6 +506,10 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
       }
     }
   }
+
+  /* recurse down the tree if too many leaves */
+
+  if (allaccurate && l > 4) allaccurate = 0; /* 4 is arbitrary XXX */
 
   /* if all leaves are accorate extract triangles */
 
@@ -533,7 +533,7 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
 	for (j = 0; j < l; j ++)
 	{
 	  m = 0;
-	  split (leaf[i], t[j], tmp, k, solid->shape, cutoff, &s, &m, &size); /* split against all other flagged primitives */
+	  split (leaf[i], t[j], tmp, k, solid->shape, cutoff, &s, &m, &size); /* split against all other flagged leaves */
 
 	  if (m)
 	  {
