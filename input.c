@@ -520,7 +520,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
 
     TYPETEST (is_tuple (corner, kwl[0], 3) && is_positive (u, kwl [1]) &&
 	      is_positive (v, kwl [2]) && is_positive (w, kwl [3]) &&
-	      is_tuple (corner, kwl[5], 3));
+	      is_tuple (scolor, kwl[5], 6));
 
     p [0] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (corner, 0));
     p [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (corner, 1)); 
@@ -947,6 +947,29 @@ static PyObject* ROTATE (PyObject *self, PyObject *args, PyObject *kwds)
   Py_RETURN_NONE;
 }
 
+/* create fillet */
+static PyObject* FILLET (PyObject *self, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("shape", "c", "r", "fillet", "scolor");
+  double r, fillet;
+  PyObject *cobj;
+  SHAPE *shape;
+  int scolor;
+  REAL c[3];
+
+  PARSEKEYS ("OOddi", &shape, &cobj, &r, &fillet, &scolor);
+
+  TYPETEST (is_shape (shape, kwl[0]) && is_tuple (cobj, kwl[1], 3) && is_positive (r, kwl[2]) && is_positive (fillet, kwl[3]));
+
+  c [0] = PyFloat_AsDouble (PyTuple_GetItem (cobj, 0));
+  c [1] = PyFloat_AsDouble (PyTuple_GetItem (cobj, 1));
+  c [2] = PyFloat_AsDouble (PyTuple_GetItem (cobj, 2));
+
+  shape_fillet (shape->ptr, c, r, fillet, scolor);
+
+  Py_RETURN_NONE;
+}
+
 static PyMethodDef methods [] =
 {
   {"SPHERE", (PyCFunction)SPHERE, METH_VARARGS|METH_KEYWORDS, "Create sphere"},
@@ -959,6 +982,7 @@ static PyMethodDef methods [] =
   {"DIFFERENCE", (PyCFunction)DIFFERENCE, METH_VARARGS|METH_KEYWORDS, "Difference of shapes"},
   {"MOVE", (PyCFunction)MOVE, METH_VARARGS|METH_KEYWORDS, "Move shape"},
   {"ROTATE", (PyCFunction)ROTATE, METH_VARARGS|METH_KEYWORDS, "Rotate shape"},
+  {"FILLET", (PyCFunction)FILLET, METH_VARARGS|METH_KEYWORDS, "Create fillet"},
   {NULL, 0, 0, NULL}
 };
 
@@ -1023,6 +1047,7 @@ int input (const char *path)
                      "from oaktree import DIFFERENCE\n"
                      "from oaktree import MOVE\n"
                      "from oaktree import ROTATE\n"
+                     "from oaktree import FILLET\n"
                      "from oaktree import SOLID\n");
 
   ERRMEM (line = malloc (128 + strlen (path)));

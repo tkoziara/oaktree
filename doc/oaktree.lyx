@@ -922,6 +922,68 @@ angle
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
+name "sub:FILLET"
+
+\end_inset
+
+FILLET
+\end_layout
+
+\begin_layout Standard
+Create fillet.
+\end_layout
+
+\begin_layout Subsection*
+FILLET (shape, c, r, fillet, scolor)
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+shape
+\series default
+ - input SHAPE object
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+c
+\series default
+ - centre 
+\begin_inset Formula $\left(x,y,z\right)$
+\end_inset
+
+ of surface picking sphere
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+r
+\series default
+ - radius of surface picking sphere
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+fillet
+\series default
+ - fillet radius
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+scolor
+\series default
+ - integer fillet surface color
+\end_layout
+
+\begin_layout Section
+\begin_inset CommandInset label
+LatexCommand label
 name "sub:SOLID"
 
 \end_inset

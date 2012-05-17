@@ -27,9 +27,16 @@ struct cylinder
   short scolor;
 };
 
+struct fillet
+{
+  REAL r;
+
+  short scolor;
+};
+
 struct shape
 {
-  enum {ADD, MUL, HSP, SPH, CYL} what;
+  enum {ADD, MUL, HSP, SPH, CYL, FLT} what;
 
   void *data;
 
@@ -51,11 +58,11 @@ void shape_move (struct shape *shape, REAL *vector);
 /* rotate shape about a point using a rotation matrix */
 void shape_rotate (struct shape *shape, REAL *point, REAL *matrix);
 
+/* insert fillet between surfaces overlapping (c, r) sphere */
+void shape_fillet (struct shape *shape, REAL c [3], REAL r, REAL filletr, short scolor);
+
 /* return distance to shape at given point */
 REAL shape_evaluate (struct shape *shape, REAL *point);
-
-/* return value and compute shape normal at given point */
-REAL shape_normal (struct shape *shape, REAL *point, REAL *normal);
 
 /* compute shape extents */
 void shape_extents (struct shape *shape, REAL *extents);
