@@ -1,4 +1,4 @@
-simu = SIMULATION ('out/spheres', 1.0, 0.001, 0.001)
+simu = SIMULATION ('out/sphere', 1.0, 0.001, 0.001)
 
 a = SPHERE ((0, 0, 0), 1, 1)
 b = SPHERE ((0, 0, 0), 0.9, 1)
