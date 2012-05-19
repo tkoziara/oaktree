@@ -11,6 +11,13 @@
 #include "error.h"
 #include "alg.h"
 
+/* XXX => sensitive to model scale */
+#if REAL == float
+  #define EPS 1E-6
+#else
+  #define EPS 1E-10
+#endif
+
 /* count shape leaves */
 static int leaves_count (struct shape *shape)
 {
@@ -153,14 +160,6 @@ static int compare_leaves (struct shape **ll, struct shape **rr)
 {
   REAL u, v, w, a [3];
 
-  /* XXX => sensitive to model scale */
-
-#if REAL == float
-  #define EPS 1E-6
-#else
-  #define EPS 1E-10
-#endif
-
   if ((*ll)->what < (*rr)->what) return -1;
   else if ((*ll)->what > (*rr)->what) return 1;
   else switch ((*ll)->what)
@@ -299,8 +298,8 @@ static int subtracted (struct shape *shape)
   return 0;
 }
 
-/* find out relation between two leaves */
-static short relation (struct shape *l, struct shape *r)
+/* return root of two nodes */
+static struct shape* root (struct shape *l, struct shape *r)
 {
   struct shape **lpath, **rpath, *il, *jr;
   short i, j;
@@ -318,18 +317,24 @@ static short relation (struct shape *l, struct shape *r)
 
   while (lpath [--i] == rpath [--j]);
 
-  i = lpath [i+1]->what;
+  il = lpath [i+1];
 
   free (lpath);
 
-  return i;
+  return il;
+}
+
+/* find out relation between two leaves */
+inline static unsigned short relation (struct shape *l, struct shape *r)
+{
+  return root (l, r)->what;
 }
 
 /* delete leaf */
-static void delete (struct shape *leaf)
+static void delete (struct shape *leaf, short permanent)
 {
   struct shape *up = leaf->up,
-	       *upup = up->up;
+	       *upup = up ? up->up : NULL;
 
   if (upup)
   {
@@ -360,68 +365,135 @@ static void delete (struct shape *leaf)
       }
     }
 
-    free (leaf->data);
-    free (leaf);
+    if (permanent)
+    {
+      free (leaf->data);
+      free (leaf);
+    }
+
     free (up);
+  }
+  else if (up)
+  {
+    if (leaf == up->left)
+    {
+      up->what = up->right->what;
+      up->left = up->right->left;
+      if (up->left) up->left->up = up;
+      up->right = up->right->right;
+      if (up->right) up->right->up = up;
+      up->data = up->right->data;
+      free (up->right);
+    }
+    else
+    {
+      up->what = up->left->what;
+      up->left = up->left->left;
+      if (up->left) up->left->up = up;
+      up->right = up->left->right;
+      if (up->right) up->right->up = up;
+      up->data = up->left->data;
+      free (up->left);
+    }
+
+    if (permanent)
+    {
+      free (leaf->data);
+      free (leaf);
+    }
   }
 }
 
 /* remove duplicated leaves */
-static void remove_duplicated_leaves (struct shape *shape)
+static struct shape* remove_duplicated_leaves (struct shape *shape)
 {
+  struct shape **leaf, *tmp, *out;
   REAL c[3] = {0, 0, 0};
-  struct shape **leaf;
-  int i, j, k, n;
+  int j, k, n;
+
+  out = shape;
  
   n = leaves_count (shape);
 
   ERRMEM (leaf = malloc (n * sizeof (struct shape*)));
 
-  i = 0;
+  n = 0;
 
-  leaves_within_sphere (shape, c, FLT_MAX, leaf, &i);
+  leaves_within_sphere (shape, c, FLT_MAX, leaf, &n);
 
-  qsort (leaf, i, sizeof (struct shape*), (int (*) (const void*, const void*)) compare_leaves);
+  qsort (leaf, n, sizeof (struct shape*), (int (*) (const void*, const void*)) compare_leaves);
 
-  for (j = 0, k = 1; k < i; )
+  for (j = 0, k = 1; k < n; )
   {
-    while (k < i && compare_leaves (&leaf[j], &leaf[k]) == 0)
+    while (k < n && compare_leaves (&leaf[j], &leaf[k]) == 0)
     {
-      if (!subtracted (leaf[j]) && subtracted (leaf [k]) && relation (leaf[j], leaf[k]) == MUL)
-      {
-	/* leaves are collected in the left-first order
-	 * while inversions happen in subtractions on the right;
-	 * in this case we can remove the subtracted conincident leaf */
+      if (leaf [k]->what == FLT) continue;
 
-        delete (leaf [k]);
+#if 0
+      if (leaf[j]->what == HSP)
+      {
+	struct halfspace *hj = leaf[j]->data, *hk = leaf[k]->data;
+	printf ("duplicated halfspaces (%d, %d): (%g,%g,%g)\n", j, k, hj->n[0], hj->n[1], hj->n[2]);
+	printf ("their relation is %s\n", relation (leaf[j], leaf[k]) == ADD ? "ADD" : "MUL");
+	if (hj->s -1) printf ("ealier one is inverted\n"); else printf ("earlier one is regular\n");
+	if (hk->s -1) printf ("later one is inverted\n"); else printf ("later one is regular\n");
       }
-      else
+#endif
+
+      if (root (leaf[j], leaf[k]) == shape) /* only shape->left <=> shape->right duplicates are handled */
       {
-	if (leaf[j]->what == HSP)
+	if (shape->what == MUL)
 	{
-	  struct halfspace *hj = leaf[j]->data,
-			   *hk = leaf[k]->data;
-	  printf ("duplicated halfspace: (%g,%g,%g) (%d, %d)\n", hj->n[0], hj->n[1], hj->n[2], j, k);
-	  printf ("their relation is %s\n", relation (leaf[j], leaf[k]) == ADD ? "ADD" : "MUL");
-	  if (hj->s -1) printf ("ealier is inverted\n");
-	  if (hk->s -1) printf ("later is inverted\n");
+	  if (!subtracted (leaf[j]))
+	  {
+	    /* leaves are collected in the left-first order while inversions in subtractions happen on the right;
+	     * if subtracted(leaf[k]) == 1 then we are removing a subtracted conincident leaf;
+	     * in the remaining case of subtracted (leaf[k]) == 0 we are removing a dulicate in a simple intersection */
+
+	    delete (leaf [k], 1);
+	  }
 	}
+	else if (shape->what == ADD && !subtracted (leaf[j]) && !subtracted (leaf[k])) /* simple unions */
+	{
+	  if (leaf[j]->what == HSP)
+	  {
+	    struct halfspace *hj = leaf[j]->data, *hk = leaf[k]->data;
+	    REAL a [3], b [3], d [3], l;
 
-	/* when duplicates are removed after each combination there
-	 * should never be more than two identical leaves at a time */
+	    /* find smallest bounding sphere */
+	    SUB (hk->p, hj->p, d); l = LEN (d);
+	    if (l < EPS) hj->r = MAX (hj->r, hk->r) + EPS; /* coincident centers */
+	    else if (hj->r+l < hk->r) /* j->sphere inside of k->sphere */
+	    {
+	      COPY (hk->p, hj->p);
+	      hj->r = hk->r;
+	    }
+	    else if (!(hk->r+l < hj->r)) /* k->sphere not inside of j->sphere */
+	    {
+	      DIV (d, l, d);
+	      SUBMUL (hj->p, hj->r, d, a);
+	      ADDMUL (hk->p, hk->r, d, b);
+	      MID (a, b, hj->p);
+	      SUB (hj->p, a, d);
+	      hj->r = LEN (d);
+	    }
+	  }
 
-	/* TODO: handle ADD case first => this will fix the union.py example
-	 *      (excessive subdivisions on flat face due to limited radii of
-	 *       participating coincident halfspaces);
-	 *       ---
-	 *       figure out how to generally handle ADD and MUL
-	 */
+	  delete (leaf [j], 0); /* remove j from tree only */
+	  delete (leaf [k], 1); /* permanently delete k */
+
+	  ERRMEM (tmp = calloc (1, sizeof (struct shape)));
+	  tmp->right = out;
+	  tmp->left = leaf [j];
+	  tmp->what = MUL;
+	  out = tmp;
+	}
       }
 
       k ++;
     }
 
-    if (k < i)
+    if (k < n)
     {
       leaf [j+1] = leaf [k];
       j ++;
@@ -430,6 +502,8 @@ static void remove_duplicated_leaves (struct shape *shape)
   }
 
   free (leaf);
+
+  return out;
 }
 
 /* copy shape */
@@ -565,7 +639,7 @@ struct shape* shape_combine (struct shape *left, short what, struct shape *right
   left->up = shape;
   right->up = shape;
 
-  remove_duplicated_leaves (shape);
+  shape = remove_duplicated_leaves (shape);
 
   return shape;
 }
