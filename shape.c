@@ -425,10 +425,15 @@ static struct shape* remove_duplicated_leaves (struct shape *shape)
 
   for (j = 0, k = 1; k < n; )
   {
+    if (leaf [j]->what == FLT)
+    {
+      j ++;
+      k = j+1;
+      continue;
+    }
+
     while (k < n && compare_leaves (&leaf[j], &leaf[k]) == 0)
     {
-      if (leaf [k]->what == FLT) continue;
-
 #if 0
       if (leaf[j]->what == HSP)
       {
