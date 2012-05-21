@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <float.h>
+#include <limits.h>
 #include "oaktree.h"
 #include "error.h"
 #include "alg.h"
@@ -128,7 +129,7 @@ static void leaves_within_sphere (struct shape *shape, REAL c [3], REAL r, struc
 
     if (d[2] > 0)
     {
-      if (d[0] + d[1] < d[2] + r) /* if below line y = -x + fillet + r */
+      if (d[0] + d[1] < d[2] + ALG_SQR2 * r) /* if below line y = -x + fillet + r*2**0.5 */
       {
          d[3] = d[2] - sqrt ((d[0]-d[2])*(d[0]-d[2])+(d[1]-d[2])*(d[1]-d[2]));
 	if (fabs (d[3]) <= r) /* if within outer fillet cylinder */
@@ -140,7 +141,7 @@ static void leaves_within_sphere (struct shape *shape, REAL c [3], REAL r, struc
     }
     else
     {
-      if (d[0] + d[1] > d[2] - r) /* if above libe y = -x - fillet - r */
+      if (d[0] + d[1] > d[2] - ALG_SQR2 * r) /* if above libe y = -x - fillet - r*2**0.5 */
       {
         d[3] = sqrt ((d[0]-d[2])*(d[0]-d[2])+(d[1]-d[2])*(d[1]-d[2])) + d[2];
 	if (fabs (d[3]) <= r) /* if within inner fillet cylinder */
@@ -330,6 +331,16 @@ inline static unsigned short relation (struct shape *l, struct shape *r)
   return root (l, r)->what;
 }
 
+/* return node depth in shape tree */
+inline static int depth (struct shape *shape)
+{
+  int x = 0;
+
+  while (shape->up) x ++, shape = shape->up;
+
+  return x;
+}
+
 /* delete leaf */
 static void delete (struct shape *leaf, short permanent)
 {
@@ -491,6 +502,8 @@ static struct shape* remove_duplicated_leaves (struct shape *shape)
 	  tmp->right = out;
 	  tmp->left = leaf [j];
 	  tmp->what = MUL;
+	  leaf [j]->up = tmp;
+	  out->up = tmp;
 	  out = tmp;
 	}
       }
@@ -510,6 +523,115 @@ static struct shape* remove_duplicated_leaves (struct shape *shape)
 
   return out;
 }
+
+/* copy and offest leaf */
+static struct shape* offset (struct shape *shape, REAL distance)
+{
+  struct shape *copy = shape_copy (shape);
+
+  switch (copy->what)
+  {
+  case ADD:
+  case MUL:
+  case FLT:
+    ASSERT (0, "Errornous call!");
+    break;
+  case HSP:
+    {
+      struct halfspace *data = copy->data;
+
+      distance *= data->s;
+
+      ADDMUL (data->p, distance, data->n, data->p);
+    }
+    break;
+  case SPH:
+    {
+      struct sphere *data = copy->data;
+
+      distance *= data->s;
+
+      data->r += distance;
+    }
+    break;
+  case CYL:
+    {
+      struct cylinder *data = copy->data;
+
+      distance *= data->s;
+
+      data->r += distance;
+    }
+    break;
+  }
+
+  return copy;
+}
+
+#if 0
+/* combine three fillets */
+static struct shape* combine_3_fillets (struct shape **leaf)
+{
+  struct shape *s[6] = {leaf[0]->left, leaf[0]->right, leaf[1]->left, leaf[1]->right, leaf[2]->left, leaf[2]->right};
+  struct shape *l[6] = {leaf[0], leaf[0], leaf[1], leaf[1], leaf[2], leaf[2]};
+  struct fillet *f[3];
+  void *tmp;
+  int i, j;
+
+  for (i = 0; i < 6; i ++)
+  {
+    for (j = i+1; j < 6; j ++)
+    {
+      if (compare_leaves (&s[j],&s[i]) < 0)
+      {
+	tmp = s[i];
+	s[i] = s[j];
+	s[j] = tmp;
+	tmp = l[i];
+	l[i] = l[j];
+	l[j] = tmp;
+      }
+    }
+  }
+
+  if (compare_leaves (&s[0],&s[1]) ||
+      compare_leaves (&s[2],&s[3]) ||
+      compare_leaves (&s[4],&s[5]) ||
+      !compare_leaves (&s[1],&s[2]) ||
+      !compare_leaves (&s[3],&s[4])) return NULL;
+
+  s[1] = s[2];
+  s[2] = s[4];
+  l[1] = l[2];
+  l[2] = l[4];
+  f[0] = l[0]->data;
+  f[1] = l[1]->data;
+  f[2] = l[2]->data;
+
+  if (f[0]->r < 0 && f[1]->r < 0 && f[2]->r < 0)
+  {
+    printf ("CASE 1\n");
+  }
+  else if (f[0]->r > 0 && f[1]->r > 0 && f[2]->r > 0)
+  {
+    printf ("CASE 2\n");
+  }
+  else if (f[0]->r > 0 && f[1]->r < 0 && f[2]->r < 0)
+  {
+    printf ("CASE 3\n");
+  }
+  else if (f[1]->r > 0 && f[0]->r < 0 && f[2]->r < 0)
+  {
+    printf ("CASE 4\n");
+  }
+  else if (f[2]->r > 0 && f[0]->r < 0 && f[1]->r < 0)
+  {
+    printf ("CASE 5\n");
+  }
+
+  return NULL;
+}
+#endif
 
 /* copy shape */
 struct shape* shape_copy (struct shape *shape)
@@ -729,12 +851,12 @@ void shape_rotate (struct shape *shape, REAL *point, REAL *matrix)
 }
 
 /* insert fillet between surfaces overlapping (c, r) sphere */
-void shape_fillet (struct shape *shape, REAL c [3], REAL r, REAL filletr, short scolor)
+void shape_fillet (struct shape *shape, REAL c [3], REAL r, REAL fillet, short scolor)
 {
-  struct fillet *fillet;
-  struct shape *copy;
+  int i, j, n, m, dp, dpmin;
+  struct shape *a, *b, *g;
+  struct fillet *data;
   struct shape **leaf;
-  int i, j, n, rel;
 
   n = leaves_count (shape);
 
@@ -744,7 +866,9 @@ void shape_fillet (struct shape *shape, REAL c [3], REAL r, REAL filletr, short 
 
   leaves_within_sphere (shape, c, r, leaf, &n);
 
-  rel = -1;
+  dpmin = INT_MAX;
+  a = b = NULL;
+  m = 0;
 
   for (i = 0; i < n; i ++)
   {
@@ -754,90 +878,92 @@ void shape_fillet (struct shape *shape, REAL c [3], REAL r, REAL filletr, short 
     {
       if (leaf[j]->what == FLT) continue;
 
-      if (rel < 0) rel = relation (leaf [i], leaf[j]);
-      else if (rel != relation (leaf [i], leaf [j]))
+      dp = depth (root (leaf[i], leaf[j]));
+      if (dp < dpmin) dpmin = dp; /* pick a lowest depth pair (top most combination) */
+    }
+  }
+
+  for (i = 0; i < n; i ++)
+  {
+    if (leaf[i]->what == FLT) continue;
+
+    for (j = i+1; j < n; j ++)
+    {
+      if (leaf[j]->what == FLT) continue;
+
+      if (leaf[i]->what == HSP && leaf[j]->what == HSP) /* check for degeneracy */
       {
-	fprintf (stderr, "#############################################\n");
-	fprintf (stderr, "# Cannot create a fillet on a saddle point! #\n");
-	fprintf (stderr, "#############################################\n");
-	return;
+	struct halfspace *hi = leaf[i]->data, *hj = leaf[j]->data;
+	if (fabs (fabs (DOT(hi->n, hj->n))-1) < EPS) continue;
+      }
+
+      dp = depth (root (leaf[i], leaf[j]));
+      if (dp == dpmin) /* only work with the top most combination */
+      {
+	a = leaf [i];
+	b = leaf [j];
+	m ++;
       }
     }
   }
 
-  /* TODO: in fact the saddle point is sort of handled when you
-   *       forget about (@@@); but note that in fillets of fillets
-   *       we get distorted radii even for right angle faces;
-   *       -------
-   *       in shape_unique_leaves the corners (duples of triples of fillets)
-   *       should be handled by creation of temporary rounding fillets:
-   *       - spherical MUL for 3-MULs
-   *       - sphereical ADD for 3-ADDs
-   *       - ADD of ADDs for 2-ADDs
-   *       - MUL of MULs for 2-MULs
-   *       - ADD of MUL of MULs for ADD-2-MULs saddle
-   *       - MUL of ADD of ADDs for MUL-2-ADDs saddle (is this possible?)
-   */
+  free (leaf);
 
-  for (i = 0; i < n; i ++)
+  if (m == 0)
   {
-    if (leaf[i]->what == FLT) continue;
+    fprintf (stderr, "############################################################\n");
+    fprintf (stderr, "# FILLET: No surface pair found within the picking sphere! #\n");
+    fprintf (stderr, "############################################################\n");
+  }
+  else if (m > 1)
+  {
+    fprintf (stderr, "##################################################################\n");
+    fprintf (stderr, "# FILLET: Too many surface pair found within the picking sphere! #\n");
+    fprintf (stderr, "##################################################################\n");
+  }
+  else
+  {
+    /* note that a is always before b due to the manner
+     * in which leaves were collected; this interplays with
+     * the fact that subtractions are on the right; hence
+     * it is more universal to add fillets to the right branch */
 
-    for (j = i+1; j < n; j ++)
+    /* change b into an opertation (a, b) node; put original b on the right of this node;
+     * when conved put fillet on the left of the node; when concave put on the left
+     * a branch with the fillet and the offset surfaces */
+
+    g = shape_copy (b);
+    g->up = b;
+    b->right = g;
+    ERRMEM (g = calloc (1, sizeof (struct shape)));
+    g->up = b;
+    b->left = g;
+    g->what = FLT;
+    g->left = shape_copy (b->right);
+    g->right = shape_copy (a);
+    ERRMEM (data = calloc (1, sizeof (struct fillet)));
+    data->scolor = scolor;
+    g->data = data;
+    b->what = relation (a, b);
+    if (b->what == ADD) data->r = fillet;
+    else data->r = -fillet;
+    free (b->data);
+    b->data = NULL;
+
+    if (b->what == ADD)
     {
-      if (leaf[j]->what == FLT) continue;
-
-#if 0
-      copy = shape_copy (leaf [i]);
-      copy->up = leaf[i];
-      leaf[i]->right = copy;
-      ERRMEM (copy = calloc (1, sizeof (struct shape)));
-      copy->up = leaf[i];
-      leaf[i]->left = copy;
-      copy->what = FLT;
-      copy->left = shape_copy (leaf[i]->right);
-      copy->right = shape_copy (leaf[j]);
-      ERRMEM (fillet = malloc (sizeof (struct fillet)));
-      fillet->scolor = scolor;
-      copy->data = fillet;
-      leaf[i]->what = relation (leaf[i], leaf[j]);
-      if (leaf[i]->what == ADD) fillet->r = filletr;
-      else fillet->r = -filletr;
-      free (leaf[i]->data);
-      leaf[i]->data = NULL;
-#else
-      /* change leaf[j] into the fillet;
-       * put the original leaf[j] on the right;
-       * put the other leaf[i] on the left */
-
-      copy = shape_copy (leaf [j]);
-      copy->up = leaf[j];
-      leaf[j]->right = copy;
-      ERRMEM (copy = calloc (1, sizeof (struct shape)));
-      copy->up = leaf[j];
-      leaf[j]->left = copy;
-      copy->what = FLT;
-      copy->left = shape_copy (leaf[j]->right);
-      copy->right = shape_copy (leaf[i]);
-      ERRMEM (fillet = malloc (sizeof (struct fillet)));
-      fillet->scolor = scolor;
-      copy->data = fillet;
-      leaf[j]->what = relation (leaf[i], leaf[j]);
-      if (leaf[j]->what == ADD) fillet->r = filletr;
-      else fillet->r = -filletr;
-      free (leaf[j]->data);
-      leaf[j]->data = NULL;
-
-      /* not to create fillets of fillets
-       * come back to the original */
-      leaf[j] = leaf[j]->right; /* (@@@) */
-
-      /* because of subtractions on the right it is more
-       * universal to always add fillets on the right;
-       * yet when added on the left they can be combined
-       * already here (leaf[i] becomes a fillet while it still iterates over leav[j]s);
-       * this produces better rendering of corners but is errornous in subtractions */
-#endif
+      ERRMEM (a = calloc (1, sizeof (struct shape)));
+      a->up = b;
+      b->left = a;
+      a->what = MUL;
+      a->right = offset (g->left, fillet);
+      ERRMEM (b = calloc (1, sizeof (struct shape)));
+      a->left = b;
+      b->up = a;
+      b->right = offset (g->right, fillet);
+      b->left = g;
+      b->what = MUL;
+      g->up = b;
     }
   }
 }
@@ -975,7 +1101,7 @@ void shape_extents (struct shape *shape, REAL *extents)
 int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves, char *inside)
 {
   struct shape **leaf;
-  int i, j, k, n;
+  int j, k, n;
   REAL v;
  
   v = shape_evaluate (shape, c);
@@ -990,25 +1116,25 @@ int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape *
 
   ERRMEM ((*leaves) = leaf = malloc (n * sizeof (struct shape*)));
 
-  i = 0;
+  n = 0;
 
-  leaves_within_sphere (shape, c, r, leaf, &i);
+  leaves_within_sphere (shape, c, r, leaf, &n);
 
-  if (i == 0) free (leaf);
+  if (n == 0) free (leaf);
 
-  if (i <= 1) return i;
+  if (n <= 1) return n;
 
-  qsort (leaf, i, sizeof (struct shape*), (int (*) (const void*, const void*)) compare_leaves);
+  qsort (leaf, n, sizeof (struct shape*), (int (*) (const void*, const void*)) compare_leaves);
 
-  for (j = 0, k = 1; k < i; )
+  for (j = 0, k = 1; k < n; )
   {
-    while (k < i && compare_leaves (&leaf[j], &leaf[k]) == 0)
+    while (k < n && compare_leaves (&leaf[j], &leaf[k]) == 0)
     {
-      if (leaf [j]->what == FLT) break; /* TODO => perhaps temporarily MUL-combine all: leaf[j] = shape_combine (leaf[j], MUL, leaf [k]); */
+      if (leaf [j]->what == FLT) break; /* TODO => temporarily combine triplets of fillets */
       k ++;
     }
 
-    if (k < i)
+    if (k < n)
     {
       leaf [j+1] = leaf [k];
       j ++;

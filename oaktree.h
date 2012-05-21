@@ -59,7 +59,7 @@ void shape_move (struct shape *shape, REAL *vector);
 void shape_rotate (struct shape *shape, REAL *point, REAL *matrix);
 
 /* insert fillet between surfaces overlapping (c, r) sphere */
-void shape_fillet (struct shape *shape, REAL c [3], REAL r, REAL filletr, short scolor);
+void shape_fillet (struct shape *shape, REAL c [3], REAL r, REAL fillet, short scolor);
 
 /* return distance to shape at given point */
 REAL shape_evaluate (struct shape *shape, REAL *point);

@@ -505,7 +505,7 @@ CUBE
 \end_layout
 
 \begin_layout Standard
-A cube shape.
+A cube like shape.
 \end_layout
 
 \begin_layout Subsection*
@@ -930,7 +930,7 @@ FILLET
 \end_layout
 
 \begin_layout Standard
-Create fillet.
+Fillet a pair of surfaces.
 \end_layout
 
 \begin_layout Subsection*
