@@ -265,7 +265,7 @@ static void initialize (struct simulation *simulation)
 
   for (solid = simulation->solid; solid; solid = solid->next)
   {
-    list = octree_insert_solid (simulation->octree, solid, solid->grid, simulation->cutoff);
+    list = octree_insert_solid (simulation->octree, solid, simulation->cutoff);
 
     for (node = list; node && node->next; node = node->next);
 

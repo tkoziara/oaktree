@@ -413,7 +413,7 @@ struct octree* octree_create (REAL extents [6])
 }
 
 /* insert solid and refine octree down to a cutoff edge length */
-struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL grid, REAL cutoff)
+struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff)
 {
   REAL t [5][3][3], p [8][3], q [2][3], (*d) [8], (*s) [4][3], *x = octree->extents;
   char allaccurate, inside, *flagged;
@@ -434,13 +434,13 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
   MID (p[0], p[6], q[0]);
   SUB (q[0], p[0], q[1]);
 
-  if (q[1][0] > grid) goto recurse; /* assumption of cubic octants */
-
   n = shape_unique_leaves (solid->shape, q[0], LEN (q[1]), &leaf, &inside);
   if (n == 0)
   {
     if (inside)
     {
+      if (q[1][0] > solid->grid) goto recurse; /* assumption of cubic octants */
+
       ERRMEM (element = calloc (1, sizeof (struct element)));
       element->triang = NULL;
       element->solid = solid;
@@ -450,8 +450,9 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
 
     goto done;
   }
-  size = 128;
+  else if (q[1][0] > solid->grid) goto recurse; /* assumption of cubic octants */
 
+  size = 128;
   ERRMEM (flagged = calloc (n, 1))
   ERRMEM (tmp = malloc (n * sizeof (struct shape*)));
   ERRMEM (d = malloc (n * sizeof (REAL [8])));
@@ -620,7 +621,7 @@ recurse:
       octree->down [7]->up = octree;
     }
 
-    for (i = 0; i < 8; i ++) octree_insert_solid (octree->down [i], solid, grid, cutoff);
+    for (i = 0; i < 8; i ++) octree_insert_solid (octree->down [i], solid, cutoff);
   }
 
 done:

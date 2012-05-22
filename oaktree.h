@@ -125,7 +125,7 @@ struct octree
 struct octree* octree_create (REAL extents [6]);
 
 /* insert solid and refine octree down to a cutoff edge length */
-struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL grid, REAL cutoff);
+struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff);
 
 /* free octree memory */
 void octree_destroy (struct octree *octree);
