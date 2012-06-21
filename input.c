@@ -304,26 +304,30 @@ static PyGetSetDef SHAPE_getset [] =
 { {NULL, 0, 0, NULL, NULL} };
 
 /*
- * SOLID
+ * DOMAIN
  */
 
-static PyTypeObject SOLID_TYPE;
+static PyTypeObject DOMAIN_TYPE;
+
+#ifdef DOMAIN
+#undef DOMAIN
+#endif
 
 typedef struct {
   PyObject_HEAD
-  struct solid *ptr;
-} SOLID;
+  struct domain *ptr;
+} DOMAIN;
 
 #if 0
-/* SOLID test */
-static int is_solid (SOLID *obj, char *var)
+/* DOMAIN test */
+static int is_domain (DOMAIN *obj, char *var)
 {
   if (obj)
   {
-    if (!PyObject_IsInstance ((PyObject*)obj, (PyObject*)&SOLID_TYPE))
+    if (!PyObject_IsInstance ((PyObject*)obj, (PyObject*)&DOMAIN_TYPE))
     {
       char buf [BUFLEN];
-      sprintf (buf, "'%s' must be a SOLID", var);
+      sprintf (buf, "'%s' must be a DOMAIN", var);
       PyErr_SetString (PyExc_TypeError, buf);
       return 0;
     }
@@ -334,17 +338,17 @@ static int is_solid (SOLID *obj, char *var)
 #endif
 
 /* constructor */
-static PyObject* SOLID_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
+static PyObject* DOMAIN_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
   KEYWORDS ("simu", "shape", "label", "grid");
-  struct solid *solid;
+  struct domain *domain;
   SIMULATION *simu;
   PyObject *label;
   SHAPE *shape;
   double grid;
-  SOLID *self;
+  DOMAIN *self;
 
-  self = (SOLID*)type->tp_alloc (type, 0);
+  self = (DOMAIN*)type->tp_alloc (type, 0);
 
   if (self)
   {
@@ -362,42 +366,42 @@ static PyObject* SOLID_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
       return NULL;
     }
 
-    ERRMEM (solid = calloc (1, sizeof (struct solid)));
-    solid->shape = shape_copy (shape->ptr);
+    ERRMEM (domain = calloc (1, sizeof (struct domain)));
+    domain->shape = shape_copy (shape->ptr);
     if (label)
     {
-      ERRMEM (solid->label = malloc (strlen (PyString_AsString (label)) + 1));
-      strcpy (solid->label, PyString_AsString (label));
+      ERRMEM (domain->label = malloc (strlen (PyString_AsString (label)) + 1));
+      strcpy (domain->label, PyString_AsString (label));
     }
-    solid->grid = grid;
+    domain->grid = grid;
 
-    if (simu->ptr->solid) simu->ptr->solid->prev = solid;
-    solid->next = simu->ptr->solid;
-    simu->ptr->solid = solid;
-    solid->prev = NULL;
+    if (simu->ptr->domain) simu->ptr->domain->prev = domain;
+    domain->next = simu->ptr->domain;
+    simu->ptr->domain = domain;
+    domain->prev = NULL;
 
-    self->ptr = solid;
+    self->ptr = domain;
   }
 
   return (PyObject*)self;
 }
 
 /* destructor */
-static void SOLID_dealloc (SOLID *self)
+static void DOMAIN_dealloc (DOMAIN *self)
 {
   self->ob_type->tp_free ((PyObject*)self);
 }
 
-/* SOLID methods */
-static PyMethodDef SOLID_methods [] =
+/* DOMAIN methods */
+static PyMethodDef DOMAIN_methods [] =
 { {NULL, NULL, 0, NULL} };
 
-/* SOLID members */
-static PyMemberDef SOLID_members [] =
+/* DOMAIN members */
+static PyMemberDef DOMAIN_members [] =
 { {NULL, 0, 0, 0, NULL} };
 
-/* SOLID getset */
-static PyGetSetDef SOLID_getset [] =
+/* DOMAIN getset */
+static PyGetSetDef DOMAIN_getset [] =
 { {NULL, 0, 0, NULL, NULL} };
 
 /*
@@ -1010,12 +1014,12 @@ static void initinput (void)
   Py_INCREF (&SHAPE_TYPE);
   PyModule_AddObject (m, "SHAPE", (PyObject*)&SHAPE_TYPE);
 
-  TYPEINIT (SOLID_TYPE, SOLID, "solfec.SOLID",
-    Py_TPFLAGS_DEFAULT, SOLID_dealloc, SOLID_new,
-    SOLID_methods, SOLID_members, SOLID_getset);
-  if (PyType_Ready (&SOLID_TYPE) < 0) return;
-  Py_INCREF (&SOLID_TYPE);
-  PyModule_AddObject (m, "SOLID", (PyObject*)&SOLID_TYPE);
+  TYPEINIT (DOMAIN_TYPE, DOMAIN, "solfec.DOMAIN",
+    Py_TPFLAGS_DEFAULT, DOMAIN_dealloc, DOMAIN_new,
+    DOMAIN_methods, DOMAIN_members, DOMAIN_getset);
+  if (PyType_Ready (&DOMAIN_TYPE) < 0) return;
+  Py_INCREF (&DOMAIN_TYPE);
+  PyModule_AddObject (m, "DOMAIN", (PyObject*)&DOMAIN_TYPE);
 }
 
 /* 
@@ -1048,7 +1052,7 @@ int input (const char *path)
                      "from oaktree import MOVE\n"
                      "from oaktree import ROTATE\n"
                      "from oaktree import FILLET\n"
-                     "from oaktree import SOLID\n");
+                     "from oaktree import DOMAIN\n");
 
   ERRMEM (line = malloc (128 + strlen (path)));
   sprintf (line, "execfile ('%s')", path);

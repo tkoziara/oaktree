@@ -75,24 +75,24 @@ void render_octree (struct octree *octree)
   }
 }
 
-/* render solids */
-void render_solids (struct octree *octree)
+/* render domains */
+void render_domains (struct octree *octree)
 {
-  struct element *element;
+  struct cell *cell;
   int i;
 
   if (octree->down [0])
   {
-    for (i = 0; i < 8; i ++) render_solids (octree->down [i]);
+    for (i = 0; i < 8; i ++) render_domains (octree->down [i]);
   }
 
   glBegin (GL_TRIANGLES);
 
   glColor3f (0.5, 0.5, 0.5);
 
-  for (element = octree->element; element; element = element->next)
+  for (cell = octree->cell; cell; cell = cell->next)
   {
-    struct triang *triang = element->triang;
+    struct triang *triang = cell->triang;
 
     if (triang)
     {
@@ -111,18 +111,18 @@ void render_solids (struct octree *octree)
   glEnd ();
 }
 
-/* render elements */
-void render_elements (struct octree *octree)
+/* render cells */
+void render_cells (struct octree *octree)
 {
   REAL e [6], w, *x;
   int i;
 
   if (octree->down [0])
   {
-    for (i = 0; i < 8; i ++) render_elements (octree->down [i]);
+    for (i = 0; i < 8; i ++) render_cells (octree->down [i]);
   }
 
-  if (octree->element)
+  if (octree->cell)
   {
     glBegin (GL_QUADS);
 
@@ -180,48 +180,5 @@ void render_elements (struct octree *octree)
     glVertex3f (e[3], e[1], e[5]);
 
     glEnd ();
-  }
-}
-
-/* render nodes */
-void render_nodes (struct octree *octree)
-{
-  struct node **node;
-  REAL p [8][3], *x;
-  int i;
-
-  if (octree->down [0])
-  {
-    for (i = 0; i < 8; i ++) render_nodes (octree->down [i]);
-  }
-
-  if (octree->element)
-  {
-    node = octree->element->node;
-    x = octree->extents;
-
-    VECTOR (p[0], x[0], x[1], x[2]);
-    VECTOR (p[1], x[0], x[4], x[2]);
-    VECTOR (p[2], x[3], x[4], x[2]);
-    VECTOR (p[3], x[3], x[1], x[2]);
-    VECTOR (p[4], x[0], x[1], x[5]);
-    VECTOR (p[5], x[0], x[4], x[5]);
-    VECTOR (p[6], x[3], x[4], x[5]);
-    VECTOR (p[7], x[3], x[1], x[5]);
-
-    glPointSize (4.0);
-    glBegin (GL_POINTS);
-
-    for (i = 0; i < 8; i ++)
-    {
-      if (node [i]->hanging)
-        glColor3f (1, 0, 0);
-      else glColor3f (0, 0, 1);
-
-      glVertex3f (p[i][0], p[i][1], p[i][2]);
-    }
-
-    glEnd ();
-    glPointSize (1.0);
   }
 }

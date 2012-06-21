@@ -269,7 +269,7 @@ static struct
 
   REAL rx, ry, rw, rh; /* original ratios */
 
-  View_Render render;
+  VIEWER_RENDER render;
 
   int is3D;
 }
@@ -279,15 +279,15 @@ static int viewportscount = 0;
 /* user callbacks */
 static struct
 {
-  View_Init init;
-  View_Idle idle;
-  View_Quit quit;
-  View_Render render;
-  View_Key key;
-  View_Keyspec keyspec;
-  View_Mouse mouse;
-  View_Motion motion;
-  View_Passive_Motion passive;
+  VIEWER_INIT init;
+  VIEWER_IDLE idle;
+  VIEWER_QUIT quit;
+  VIEWER_RENDER render;
+  VIEWER_KEY key;
+  VIEWER_KEYSPEC keyspec;
+  VIEWER_MOUSE mouse;
+  VIEWER_MOTION motion;
+  VIEWER_PASSIVE_MOTION passive;
   short holdmouse;
 } user;
 
@@ -1147,16 +1147,16 @@ void viewer (
   int wdt,
   int hgh,
   REAL *extents,
-  View_Menu menu,
-  View_Init init,
-  View_Idle idle,
-  View_Quit quit,
-  View_Render render,
-  View_Key key,
-  View_Keyspec keyspec,
-  View_Mouse mouse,
-  View_Motion motion,
-  View_Passive_Motion passive)
+  VIEWER_MENU menu,
+  VIEWER_INIT init,
+  VIEWER_IDLE idle,
+  VIEWER_QUIT quit,
+  VIEWER_RENDER render,
+  VIEWER_KEY key,
+  VIEWER_KEYSPEC keyspec,
+  VIEWER_MOUSE mouse,
+  VIEWER_MOTION motion,
+  VIEWER_PASSIVE_MOTION passive)
 {
   int i, *codes;
   char **names;
@@ -1236,7 +1236,7 @@ void viewer_redraw_all (void)
 /* reset scene extents */
 void viewer_reset_extents (REAL *extents)
 {
-  View_Init init;
+  VIEWER_INIT init;
 
   init = user.init;
   user.init = NULL;
@@ -1300,7 +1300,7 @@ int viewer_open_window (
   int y,
   int w,
   int h,
-  View_Render render)
+  VIEWER_RENDER render)
 {
   if (windowscount < MAXWINDOWS)
   {
@@ -1339,7 +1339,7 @@ int viewer_open_viewport (
   int w,
   int h,
   int is3D,
-  View_Render render)
+  VIEWER_RENDER render)
 {
   if (viewportscount < MAXVIEWPORTS)
   {

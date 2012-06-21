@@ -76,7 +76,7 @@ int shape_leaf_in_union (struct shape *leaf);
 /* free shape memory */
 void shape_destroy (struct shape *shape);
 
-struct solid
+struct domain
 {
   struct shape *shape;
 
@@ -84,7 +84,7 @@ struct solid
 
   REAL grid;
 
-  struct solid *prev, *next;
+  struct domain *prev, *next;
 };
 
 struct triang
@@ -94,29 +94,24 @@ struct triang
   short n;
 };
 
-struct node
+struct cell
 {
-  unsigned char hanging;
-
-  struct node *next;
-};
-
-struct element
-{
-  struct node *node [8];
-
   struct triang *triang;
 
-  struct solid *solid;
+  struct domain *domain;
 
-  struct element *next;
+  struct cell **adj;
+
+  short nadj;
+
+  struct cell *next;
 };
 
 struct octree
 {
   REAL extents [6];
 
-  struct element *element;
+  struct cell *cell;
 
   struct octree *up, *down [8];
 };
@@ -124,8 +119,8 @@ struct octree
 /* create octree */
 struct octree* octree_create (REAL extents [6]);
 
-/* insert solid and refine octree down to a cutoff edge length */
-struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff);
+/* insert domain and refine octree down to a cutoff edge length */
+void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cutoff);
 
 /* free octree memory */
 void octree_destroy (struct octree *octree);
@@ -142,11 +137,9 @@ struct simulation
 
   REAL extents [6];
 
-  struct solid *solid;
+  struct domain *domain;
 
   struct octree *octree;
-
-  struct node *node;
 
   struct simulation *prev, *next;
 };

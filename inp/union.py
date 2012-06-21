@@ -14,4 +14,4 @@ a = COPY (b)
 MOVE (a, (0, -1, 1.5))
 c = UNION (a, c)
 
-SOLID (simu, c)
+DOMAIN (simu, c)

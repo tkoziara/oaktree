@@ -1,0 +1,9 @@
+Needed:
+#######
+
+remove: shape_copy ()
+change: shape_combine () so that it packs the output shape into a single block of memory
+
+---
+
+Deal with cells that contain disjoint surfaces, e.g. narrow openings in a solid

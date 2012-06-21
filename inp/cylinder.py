@@ -10,4 +10,4 @@ a = CYLINDER ((0, -1, 0.5), 2, 0.25, (1, 1, 1))
 ROTATE (a, (0, -1, 0.5), (1, 0, 0), -90)
 c = DIFFERENCE (c, a)
 
-SOLID (simu, c)
+DOMAIN (simu, c)

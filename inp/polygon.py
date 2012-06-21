@@ -8,4 +8,4 @@ MOVE (b, (0.3, 0.3, 0.5))
 
 c = DIFFERENCE (a, b)
 
-SOLID (simu, c)
+DOMAIN (simu, c)

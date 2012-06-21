@@ -30,8 +30,8 @@ static int vieweron = 0, width = 512, height = 512;  /* viewer flag, initial win
 enum {MENU_SIMULATION = 0, MENU_RENDER, MENU_LAST}; /* menu identifiers */
 static char* menu_name [MENU_LAST];  /* menu names */
 static int menu_code [MENU_LAST]; /* menu codes */
-enum {SIMULATION_NEXT, SIMULATION_PREVIOUS, RENDER_SOLIDS, RENDER_ELEMENTS, RENDER_NODES, RENDER_OCTREE}; /* menu items */
-static enum {SOLIDS = 0x01, ELEMENTS = 0x02, NODES = 0x04, OCTREE = 0x08} render_item = SOLIDS|OCTREE; /* render item */
+enum {SIMULATION_NEXT, SIMULATION_PREVIOUS, RENDER_DOMAINS, RENDER_CELLS, RENDER_OCTREE}; /* menu items */
+static enum {DOMAINS = 1 << 0, CELLS = 1 << 1, OCTREE = 1 << 2} render_item = DOMAINS; /* render item */
 
 /* simulation menu callback */
 static void menu_simulation (int item)
@@ -56,17 +56,13 @@ static void menu_render (int item)
 {
   switch (item)
   {
-  case RENDER_SOLIDS:
-    if (render_item & SOLIDS) render_item &= ~SOLIDS;
-    else render_item |= SOLIDS;
+  case RENDER_DOMAINS:
+    if (render_item & DOMAINS) render_item &= ~DOMAINS;
+    else render_item |= DOMAINS;
     break;
-  case RENDER_ELEMENTS:
-    if (render_item & ELEMENTS) render_item &= ~ELEMENTS;
-    else render_item |= ELEMENTS;
-    break;
-  case RENDER_NODES:
-    if (render_item & NODES) render_item &= ~NODES;
-    else render_item |= NODES;
+  case RENDER_CELLS:
+    if (render_item & CELLS) render_item &= ~CELLS;
+    else render_item |= CELLS;
     break;
   case RENDER_OCTREE:
     if (render_item & OCTREE) render_item &= ~OCTREE;
@@ -89,9 +85,8 @@ static int  menu (char ***names, int **codes)
 
   menu_name [MENU_RENDER] = "render";
   menu_code [MENU_RENDER] = glutCreateMenu (menu_render);
-  glutAddMenuEntry ("solids /s/", RENDER_SOLIDS);
-  glutAddMenuEntry ("elements /e/", RENDER_ELEMENTS);
-  glutAddMenuEntry ("nodes /n/", RENDER_NODES);
+  glutAddMenuEntry ("domains /d/", RENDER_DOMAINS);
+  glutAddMenuEntry ("cells /c/", RENDER_CELLS);
   glutAddMenuEntry ("octree /o/", RENDER_OCTREE);
 
   *names = menu_name;
@@ -124,31 +119,24 @@ static void render ()
 {
   if (simulation)
   {
-    if (render_item & SOLIDS) render_solids (simulation->octree);
+    if (render_item & DOMAINS) render_domains (simulation->octree);
 
-    if (render_item & ELEMENTS)
+    if (render_item & CELLS)
     {
-      if (render_item & SOLIDS)
+      if (render_item & DOMAINS)
       {
 	glEnable (GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
       }
 
-      render_elements (simulation->octree);
+      render_cells (simulation->octree);
 
-      if (render_item & SOLIDS) glDisable (GL_BLEND);
-    }
-
-    if (render_item & NODES)
-    {
-      glDisable (GL_LIGHTING);
-      render_nodes (simulation->octree);
-      glEnable (GL_LIGHTING);
+      if (render_item & DOMAINS) glDisable (GL_BLEND);
     }
 
     if (render_item & OCTREE)
     {
-      if (render_item & (SOLIDS|ELEMENTS))
+      if (render_item & (DOMAINS|CELLS))
       {
 	glEnable (GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -156,7 +144,7 @@ static void render ()
 
       render_octree (simulation->octree);
 
-      if (render_item & (SOLIDS|ELEMENTS)) glDisable (GL_BLEND);
+      if (render_item & (DOMAINS|CELLS)) glDisable (GL_BLEND);
     }
   }
 }
@@ -174,14 +162,11 @@ static void key (int key, int x, int y)
   case '>':
     menu_simulation (SIMULATION_NEXT);
     break;
-  case 's':
-    menu_render (RENDER_SOLIDS);
+  case 'd':
+    menu_render (RENDER_DOMAINS);
     break;
-  case 'e':
-    menu_render (RENDER_ELEMENTS);
-    break;
-  case 'n':
-    menu_render (RENDER_NODES);
+  case 'c':
+    menu_render (RENDER_CELLS);
     break;
   case 'o':
     menu_render (RENDER_OCTREE);
@@ -213,8 +198,7 @@ static void passive (int x, int y)
 /* initialize simulation */
 static void initialize (struct simulation *simulation)
 {
-  struct node *list, *node;
-  struct solid *solid;
+  struct domain *domain;
   REAL e [6], g [6];
   struct timing t;
   double dt;
@@ -228,9 +212,9 @@ static void initialize (struct simulation *simulation)
   g [4] = -FLT_MAX;
   g [5] = -FLT_MAX;
 
-  for (solid = simulation->solid; solid; solid = solid->next)
+  for (domain = simulation->domain; domain; domain = domain->next)
   {
-    shape_extents (solid->shape, e);
+    shape_extents (domain->shape, e);
 
     if (e[0] < g[0]) g[0] = e[0];
     if (e[1] < g[1]) g[1] = e[1];
@@ -261,19 +245,9 @@ static void initialize (struct simulation *simulation)
 
   simulation->octree = octree_create (simulation->extents);
 
-  simulation->node = NULL;
-
-  for (solid = simulation->solid; solid; solid = solid->next)
+  for (domain = simulation->domain; domain; domain = domain->next)
   {
-    list = octree_insert_solid (simulation->octree, solid, simulation->cutoff);
-
-    for (node = list; node && node->next; node = node->next);
-
-    if (node)
-    {
-      node->next = simulation->node;
-      simulation->node = list;
-    }
+    octree_insert_domain (simulation->octree, domain, simulation->cutoff);
   }
 
   dt = timerend (&t);

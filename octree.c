@@ -209,154 +209,64 @@ done:
   }
 }
 
-/* create node */
-static struct node* node (REAL *p, REAL *y, struct element *e, REAL cutoff, struct node **list)
+/* drop (c, y, l) down the tree and complete adjacency */
+static void drop (struct octree *octree, short level, struct domain *domain, struct cell *c, REAL *y, short l)
 {
-  struct node *node;
-  REAL u;
-
-  if (e)
-  {
-    u = p[0]-y[0];
-    if (fabs (u) < cutoff)
-    {
-      u = p[1]-y[1];
-      if (fabs (u) < cutoff)
-      {
-	u = p[2]-y[2];
-	if (fabs (u) < cutoff) return e->node [0];
-	else
-	{
-	  u = p[2]-y[5];
-	  if (fabs (u) < cutoff) return e->node [4];
-	}
-      }
-      else
-      {
-	u = p[1]-y[4];
-	if (fabs (u) < cutoff)
-	{
-	  u = p[2]-y[2];
-	  if (fabs (u) < cutoff) return e->node [1];
-	  else
-	  {
-	    u = p[2]-y[5];
-	    if (fabs (u) < cutoff) return e->node [5];
-	  }
-	}
-      }
-    }
-    else
-    {
-      u = p[0]-y[3];
-      if (fabs (u) < cutoff)
-      {
-	u = p[1]-y[1];
-	if (fabs (u) < cutoff)
-	{
-	  u = p[2]-y[2];
-	  if (fabs (u) < cutoff) return e->node [3];
-	  else
-	  {
-	    u = p[2]-y[5];
-	    if (fabs (u) < cutoff) return e->node [7];
-	  }
-	}
-	else
-	{
-	  u = p[1]-y[4];
-	  if (fabs (u) < cutoff)
-	  {
-	    u = p[2]-y[2];
-	    if (fabs (u) < cutoff) return e->node [2];
-	    else
-	    {
-	      u = p[2]-y[5];
-	      if (fabs (u) < cutoff) return e->node [6];
-	    }
-	  }
-	}
-      }
-    }
-
-    ERRMEM  (node = calloc (1, sizeof (struct node)));
-
-    node->hanging = 1;
-
-    /* TODO: compute involved element nodes and coefficients */
-  }
-  else ERRMEM  (node = calloc (1, sizeof (struct node)));
-
-  node->next = *list;
-  *list = node;
-
-  return node;
-}
-
-/* propagate element */
-static void propagate (struct octree *octree, struct solid *solid, REAL *y, struct element *e, REAL cutoff, struct node **list)
-{
-  static short j [8][3] = {{0, 1, 2}, {0, 4, 2}, {3, 4, 2}, {3, 1, 2}, {0, 1, 5}, {0, 4, 5}, {3, 4, 5}, {3, 1, 5}};
-  struct element *element = octree->element;
-  REAL p [3], *x = octree->extents;
+  struct cell *cell = octree->cell; /* current domain cells can only be the heads of octree cell lists  */
+  REAL *x = octree->extents, p [3];
   int i;
 
-  if (y[3] < x[0] ||
-      y[4] < x[1] ||
-      y[5] < x[2] ||
-      y[0] > x[3] ||
-      y[1] > x[4] ||
-      y[2] > x[5] ||
-      element == e) return;
+  if (y[3] < x[0] || y[4] < x[1] || y[5] < x[2] || y[0] > x[3] || y[1] > x[4] || y[2] > x[5]) return; /* doesn't overlap */
 
-  if (element && element->solid == solid)
+  if (cell == c) return; /* slef */
+
+  if (cell && cell->domain == domain) /* c and cell overlap in the same domain */
   {
-    for (i = 0; i < 8; i ++)
-    {
-      if (element->node [i]) continue;
+    MID (x, x+3, p);
 
-      p [0] = x[j[i][0]];
-      p [1] = x[j[i][1]];
-      p [2] = x[j[i][2]];
+    i = 0;
 
-      if (p[0] < y [0] ||
-	  p[1] < y [1] ||
-	  p[2] < y [2] ||
-	  p[0] > y [3] ||
-	  p[1] > y [4] ||
-	  p[2] > y [5]) continue;
+    if (p[0] > y[0] && p[0] < y[3]) i ++;
+    if (p[1] > y[1] && p[1] < y[4]) i ++;
+    if (p[2] > y[2] && p[2] < y[5]) i ++;
 
-      element->node [i] = node (p, y, e, cutoff, list);
-    }
+    if (i != 2) return; /* c and cell don't overlap through face */
+
+    ERRMEM (cell->adj = realloc (cell->adj, ((cell->nadj+1) * sizeof (struct cell*))));
+    ERRMEM (c->adj = realloc (c->adj, ((c->nadj+1) * sizeof (struct cell*))));
+    cell->adj [cell->nadj] = c;
+    c->adj [c->nadj] = cell;
+    cell->nadj ++;
+    c->nadj ++;
   }
   else if (octree->down [0])
   {
-    for (i = 0; i < 8; i ++) propagate (octree->down [i], solid, y, e, cutoff, list);
+    for (i = 0; i < 8; i ++) drop (octree->down [i], level+1, domain, c, y, l);
   }
 }
 
 /* auxiliary item */
 struct item
 {
-  struct element *element;
+  struct cell *cell;
   REAL *extents;
   short level;
   struct item *next;
 };
 
-/* collect items */
-static void collect_items (short level, struct octree *octree, struct solid *solid, struct item **list)
+/* collect cells from given domain into items list */
+static void collect_items (struct octree *octree, short level, struct domain *domain, struct item **list)
 {
-  struct element *element = octree->element;
+  struct cell *cell = octree->cell;
   struct item *item;
   int i;
 
-  if (element && element->solid == solid)
+  if (cell && cell->domain == domain)
   {
     ERRMEM (item = malloc (sizeof (struct item)));
 
     item->extents = octree->extents;
-    item->element = element;
+    item->cell = cell;
     item->level = level;
 
     item->next = *list;
@@ -364,7 +274,7 @@ static void collect_items (short level, struct octree *octree, struct solid *sol
   }
   else if (octree->down [0])
   {
-    for (i = 0; i < 8; i ++) collect_items (level+1, octree->down [i], solid, list);
+    for (i = 0; i < 8; i ++) collect_items (octree->down [i], level+1, domain, list);
   }
 }
 
@@ -372,14 +282,12 @@ static void collect_items (short level, struct octree *octree, struct solid *sol
 #define LE(i, j) (i)->level <= (j)->level
 IMPLEMENT_LIST_SORT (SINGLE_LINKED, sort_items, struct item, prev, next, LE)
 
-/* create nodes for solid elements */
-static struct node* create_nodes (struct octree *octree, struct solid *solid, REAL cutoff)
+/* create cell adjacency */
+static void create_cell_adjacency (struct octree *octree, struct domain *domain)
 {
   struct item *item = NULL, *next;
-  struct node *list = NULL;
-  int i;
 
-  collect_items (0, octree, solid, &item);
+  collect_items (octree, 0, domain, &item);
 
   item = sort_items (item);
 
@@ -387,17 +295,10 @@ static struct node* create_nodes (struct octree *octree, struct solid *solid, RE
   {
     next = item->next;
 
-    for (i = 0; i < 8; i ++)
-    {
-      if (!item->element->node [i]) item->element->node [i] = node (NULL, NULL, NULL, cutoff, &list);
-    }
-
-    propagate (octree, solid, item->extents, item->element, cutoff, &list);
+    drop (octree, 0, domain, item->cell, item->extents, item->level);
 
     free (item);
   }
-
-  return list;
 }
 
 /* create octree down to a cutoff edge length */
@@ -412,14 +313,14 @@ struct octree* octree_create (REAL extents [6])
   return octree;
 }
 
-/* insert solid and refine octree down to a cutoff edge length */
-struct node* octree_insert_solid (struct octree *octree, struct solid *solid, REAL cutoff)
+/* insert domain and refine octree down to a cutoff edge length */
+void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cutoff)
 {
   REAL t [5][3][3], p [8][3], q [2][3], (*d) [8], (*s) [4][3], *x = octree->extents;
   char allaccurate, inside, *flagged;
   int i, j, k, l, n, m, o, size;
   struct shape **leaf, **tmp;
-  struct element *element;
+  struct cell *cell;
   struct triang *triang;
 
   VECTOR (p[0], x[0], x[1], x[2]);
@@ -434,23 +335,23 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
   MID (p[0], p[6], q[0]);
   SUB (q[0], p[0], q[1]);
 
-  n = shape_unique_leaves (solid->shape, q[0], LEN (q[1]), &leaf, &inside);
+  n = shape_unique_leaves (domain->shape, q[0], LEN (q[1]), &leaf, &inside);
   if (n == 0)
   {
     if (inside)
     {
-      if (q[1][0] > solid->grid) goto recurse; /* assumption of cubic octants */
+      if (q[1][0] > domain->grid) goto recurse; /* assumption of cubic octants */
 
-      ERRMEM (element = calloc (1, sizeof (struct element)));
-      element->triang = NULL;
-      element->solid = solid;
-      element->next = octree->element;
-      octree->element = element;
+      ERRMEM (cell = calloc (1, sizeof (struct cell)));
+      cell->triang = NULL;
+      cell->domain = domain;
+      cell->next = octree->cell;
+      octree->cell = cell;
     }
 
     goto done;
   }
-  else if (q[1][0] > solid->grid) goto recurse; /* assumption of cubic octants */
+  else if (q[1][0] > domain->grid) goto recurse; /* assumption of cubic octants */
 
   size = 128;
   ERRMEM (flagged = calloc (n, 1))
@@ -484,7 +385,7 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
   {
     x = (REAL*)t;
 
-    for (j = 0; j < 8; j ++)  x [j] = shape_evaluate (solid->shape, p[j]); /* sample shape */
+    for (j = 0; j < 8; j ++)  x [j] = shape_evaluate (domain->shape, p[j]); /* sample shape */
 
     for (i = 0; i < n; i ++)
     {
@@ -534,7 +435,7 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
 	for (j = 0; j < l; j ++)
 	{
 	  m = 0;
-	  split (leaf[i], t[j], tmp, k, solid->shape, cutoff, &s, &m, &size); /* split against all other flagged leaves */
+	  split (leaf[i], t[j], tmp, k, domain->shape, cutoff, &s, &m, &size); /* split against all other flagged leaves */
 
 	  if (m)
 	  {
@@ -565,11 +466,11 @@ struct node* octree_insert_solid (struct octree *octree, struct solid *solid, RE
 
   if (triang || (allaccurate && inside)) /* triangulation was created or inner octant */
   {
-    ERRMEM (element = calloc (1, sizeof (struct element)));
-    element->triang = triang;
-    element->solid = solid;
-    element->next = octree->element;
-    octree->element = element;
+    ERRMEM (cell = calloc (1, sizeof (struct cell)));
+    cell->triang = triang;
+    cell->domain = domain;
+    cell->next = octree->cell;
+    octree->cell = cell;
   }
   else if (!allaccurate) /* not enough accuracy */
   {
@@ -621,31 +522,31 @@ recurse:
       octree->down [7]->up = octree;
     }
 
-    for (i = 0; i < 8; i ++) octree_insert_solid (octree->down [i], solid, cutoff);
+    for (i = 0; i < 8; i ++) octree_insert_domain (octree->down [i], domain, cutoff);
   }
 
 done:
-  if (!octree->up) return create_nodes (octree, solid, cutoff);
-  else return NULL;
+  if (!octree->up) create_cell_adjacency (octree, domain);
 }
 
 /* free octree memory */
 void octree_destroy (struct octree *octree)
 {
-  struct element *element, *next;
+  struct cell *cell, *next;
   int i;
 
   if (octree->down [0]) for (i = 0; i < 8; i ++) octree_destroy (octree->down [i]);
 
-  for (element = octree->element; element; element = next)
+  for (cell = octree->cell; cell; cell = next)
   {
-    next = element->next;
-    if (element->triang)
+    next = cell->next;
+    if (cell->triang)
     {
-      free (element->triang->t);
-      free (element->triang);
+      free (cell->triang->t);
+      free (cell->triang);
+      free (cell->adj);
     }
-    free (element);
+    free (cell);
   }
 
   free (octree);

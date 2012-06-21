@@ -11,13 +11,10 @@
 /* render octree itself */
 void render_octree (struct octree *octree);
 
-/* render solids */
-void render_solids (struct octree *octree);
+/* render domains */
+void render_domains (struct octree *octree);
 
-/* render elements */
-void render_elements (struct octree *octree);
-
-/* render nodes */
-void render_nodes (struct octree *octree);
+/* render cells */
+void render_cells (struct octree *octree);
 
 #endif

@@ -10,5 +10,5 @@ a = SPHERE ((0, 0, 0), 0.018, 2)
 b = CYLINDER ((0, 0, 0), 0.05, 0.01, (2, 2, 2))
 d = UNION (a, b)
 
-SOLID (simu, c)
-SOLID (simu, d)
+DOMAIN (simu, c)
+DOMAIN (simu, d)
