@@ -534,7 +534,7 @@ static struct shape* offset (struct shape *shape, REAL distance)
   case ADD:
   case MUL:
   case FLT:
-    ASSERT (0, "Errornous call!");
+    ASSERT (0, "ERROR");
     break;
   case HSP:
     {
@@ -1143,6 +1143,89 @@ int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape *
   }
 
   return j+1;
+}
+
+/* compute leaf normal */
+void leaf_normal (struct shape *leaf, REAL *point, REAL *normal)
+{
+  struct halfspace *halfspace;
+  struct cylinder *cylinder;
+  struct sphere *sphere;
+  struct fillet *fillet;
+  REAL a, b, v, z [3];
+
+  switch (leaf->what)
+  {
+  case ADD:
+  case MUL:
+    ASSERT (0, "ERROR");
+    break;
+  case HSP:
+    halfspace = leaf->data;
+    COPY (halfspace->n, normal);
+    SCALE (normal, halfspace->s);
+    break;
+  case SPH:
+    sphere = leaf->data;
+    SUB (point, sphere->c, normal);
+    SCALE (normal, sphere->s);
+    break;
+  case CYL:
+    cylinder = leaf->data;
+    SUB (point, cylinder->p, z);
+    a = DOT (z, cylinder->d);
+    SUBMUL (z, a, cylinder->d, normal);
+    SCALE (normal, cylinder->s);
+    break;
+  case FLT:
+    fillet = leaf->data;
+    v = fillet->r;
+    if (v > 0)
+    {
+      a = shape_evaluate (leaf->left, point);
+      b = shape_evaluate (leaf->right, point);
+      if (a > v || b > v)
+      {
+	if (a < b) leaf_normal (leaf->left, point, normal);
+	else leaf_normal (leaf->right, point, normal);
+      }
+      else
+      {
+	leaf_normal (leaf->left, point, z);
+	leaf_normal (leaf->right, point, normal);
+
+	v = sqrt((a-v)*(a-v)+(b-v)*(b-v));
+	a = a / v;
+	b = b / v;
+	normal [0] = a*z[0] + b*normal[0];
+	normal [1] = a*z[1] + b*normal[1];
+	normal [2] = a*z[2] + b*normal[2];
+      }
+    }
+    else
+    {
+      a = shape_evaluate (leaf->left, point);
+      b = shape_evaluate (leaf->right, point);
+      if (a < v || b < v)
+      {
+	if (a > b) leaf_normal (leaf->left, point, normal);
+	else leaf_normal (leaf->right, point, normal);
+      }
+      else
+      {
+	leaf_normal (leaf->left, point, z);
+	leaf_normal (leaf->right, point, normal);
+
+	v = sqrt((a-v)*(a-v)+(b-v)*(b-v));
+	a = -a / v;
+	b = -b / v;
+	normal [0] = a*z[0] + b*normal[0];
+	normal [1] = a*z[1] + b*normal[1];
+	normal [2] = a*z[2] + b*normal[2];
+      }
+    }
+    break;
+  }
 }
 
 /* test whether the leaf is in a union of shapes */

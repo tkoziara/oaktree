@@ -70,6 +70,9 @@ void shape_extents (struct shape *shape, REAL *extents);
 /* output unique shape leaves overlapping (c,r) sphere and return their count or inside flag if count is zero */
 int shape_unique_leaves (struct shape *shape, REAL c [3], REAL r, struct shape ***leaves, char *inside);
 
+/* compute leaf normal */
+void leaf_normal (struct shape *leaf, REAL *point, REAL *normal);
+
 /* test whether the leaf is in a union of shapes */
 int shape_leaf_in_union (struct shape *leaf);
 
@@ -87,22 +90,28 @@ struct domain
   struct domain *prev, *next;
 };
 
-struct triang
+struct face
 {
-  REAL (*t) [4][3];
+  struct shape *leaf;
+
+  REAL normal [3];
+
+  REAL area;
+
+  REAL (*t) [3][3];
 
   short n;
+
+  struct cell *adj;
+
+  struct face *next;
 };
 
 struct cell
 {
-  struct triang *triang;
-
   struct domain *domain;
 
-  struct cell **adj;
-
-  short nadj;
+  struct face *face;
 
   struct cell *next;
 };

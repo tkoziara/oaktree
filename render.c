@@ -79,6 +79,7 @@ void render_octree (struct octree *octree)
 void render_domains (struct octree *octree)
 {
   struct cell *cell;
+  struct face *face;
   int i;
 
   if (octree->down [0])
@@ -92,15 +93,15 @@ void render_domains (struct octree *octree)
 
   for (cell = octree->cell; cell; cell = cell->next)
   {
-    struct triang *triang = cell->triang;
-
-    if (triang)
+    for (face = cell->face; face; face = face->next)
     {
-      REAL (*t) [4][3] = triang->t;
+      if (face->leaf == NULL) continue;
 
-      for (i = 0; i < triang->n; i ++)
+      REAL (*t) [3][3] = face->t;
+
+      for (i = 0; i < face->n; i ++)
       {
-	glNormal3f (t[i][3][0], t[i][3][1], t[i][3][2]);
+	glNormal3f (face->normal[0], face->normal[1], face->normal[2]);
 	glVertex3f (t[i][0][0], t[i][0][1], t[i][0][2]);
 	glVertex3f (t[i][1][0], t[i][1][1], t[i][1][2]);
 	glVertex3f (t[i][2][0], t[i][2][1], t[i][2][2]);

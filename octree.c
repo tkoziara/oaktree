@@ -36,7 +36,7 @@ inline static void zeropoint (REAL a [3], REAL b [3], REAL u, REAL v, REAL z [3]
 }
 
 /* split triangle */
-static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k, struct shape *shape, REAL cutoff, REAL (**out) [4][3], int *m, int *size)
+static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k, struct shape *shape, REAL cutoff, REAL (**out) [3][3], int *m, int *size)
 {
   REAL s [3][3][3], d [3], n [3], v;
   int i, j;
@@ -46,10 +46,23 @@ static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k,
     if ((*m)+1 >= (*size))
     {
       (*size) *= 2;
-      ERRMEM ((*out) = realloc ((*out), (*size) * sizeof (REAL [4][3])));
+      ERRMEM ((*out) = realloc ((*out), (*size) * sizeof (REAL [3][3])));
     }
 
     MID3 (t[0], t[1], t[2], d);
+
+    if (src == NULL) /* called from trim */
+    {
+      v = shape_evaluate (shape, d);
+      if (v < 0.0) /* include inner bits only */
+      {
+	COPY (t[0], (*out) [*m][0]);
+	COPY (t[1], (*out) [*m][1]);
+	COPY (t[2], (*out) [*m][2]);
+	(*m) ++;
+      }
+      else return;
+    }
 
     NORMAL (t[0], t[1], t[2], n);
 
@@ -79,7 +92,6 @@ static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k,
 	COPY (t[0], (*out) [*m][0]);
 	COPY (t[1], (*out) [*m][1]);
 	COPY (t[2], (*out) [*m][2]);
-	COPY (n, (*out) [*m][3]);
 	(*m) ++;
       }
     }
@@ -209,12 +221,121 @@ done:
   }
 }
 
-/* drop (c, y, l) down the tree and complete adjacency */
-static void drop (struct octree *octree, short level, struct domain *domain, struct cell *c, REAL *y, short l)
+#if 0
+/* trim internal face of a boundary cell and return its area */
+static REAL trim (struct cell *cell, REAL *x, int type, REAL cutoff, struct face *face)
+{
+  REAL t [3][3], (*s) [3][3];
+  struct shape *leaf [5]; /* XXX */
+  struct face *f;
+  int k, m, size;
+  REAL area, a;
+
+  for (k = 0, f = cell->face; f; f = f->next)
+  {
+    if (f->leaf) leaf [k] = f->leaf, k ++;
+  }
+
+#if DEBUG
+  ASSERT (k < 5, "ERROR!");
+#endif
+
+  if (k)
+  {
+    m = 0;
+    size = 8;
+    ERRMEM (s = malloc (size * sizeof (REAL [3][3])));
+
+    switch (type)
+    {
+    case -3: /* -xy */
+      t[0][0] = x[0]; t[0][1] = x[1]; t[0][2] = x[2];
+      t[1][0] = x[0]; t[1][1] = x[4]; t[1][2] = x[2];
+      t[2][0] = x[3]; t[2][1] = x[1]; t[2][2] = x[2];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
+      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[2];
+      t[1][0] = x[3]; t[1][1] = x[4]; t[1][2] = x[2];
+      t[2][0] = x[3]; t[2][1] = x[1]; t[2][2] = x[2];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
+    break;
+    case -2: /* -xz */
+    break;
+    case -1: /* -yz */
+    break;
+    case 1: /* yz */
+    break;
+    case 2: /* xz */
+    break;
+    case 3: /* xy */
+      t[0][0] = x[0]; t[0][1] = x[1]; t[0][2] = x[5];
+      t[1][0] = x[3]; t[1][1] = x[1]; t[1][2] = x[5];
+      t[2][0] = x[0]; t[2][1] = x[4]; t[2][2] = x[5];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
+      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[5];
+      t[1][0] = x[3]; t[1][1] = x[1]; t[1][2] = x[5];
+      t[2][0] = x[3]; t[2][1] = x[4]; t[2][2] = x[5];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
+    break;
+    }
+
+    area = 0;
+
+    ASSERT (m, "ERROR!");
+
+    ERRMEM (face->t = malloc (m * sizeof (REAL [3][3])))
+
+    for (k = 0; k < m; k ++)
+    {
+      COPY (s [k][0], face->t [k][0]);
+      COPY (s [k][1], face->t [k][1]);
+      COPY (s [k][2], face->t [k][2]);
+      TRIANGLE_AREA (s[k][0], s[k][1], s[k][2], a);
+      area += a;
+    }
+
+    face->n = m;
+
+    free (s);
+  }
+  else area = (x[3]-x[0])*(x[3]-x[0]); /* XXX assumption of cubic cells */
+
+  return area;
+}
+#endif
+
+/* invert input face into output face and return its area */
+static REAL invert (struct face *in, struct face *out)
+{
+  int i;
+
+  out->normal [0] = -in->normal[0];
+  out->normal [1] = -in->normal[1];
+  out->normal [2] = -in->normal[2];
+
+  if (in->t && out->leaf)
+  {
+    ERRMEM (out->t = malloc (in->n * sizeof (REAL [3][3])));
+
+    for (i = 0; i < in->n; i ++)
+    {
+      COPY (in->t[i][0], out->t[i][2]);
+      COPY (in->t[i][1], out->t[i][1]);
+      COPY (in->t[i][2], out->t[i][0]);
+    }
+
+    out->n = in->n;
+  }
+
+  return in->area;
+}
+
+/* drop (c, y) down the tree and complete adjacency */
+static void drop (struct octree *octree, struct domain *domain, REAL cutoff, struct cell *c, REAL *y)
 {
   struct cell *cell = octree->cell; /* current domain cells can only be the heads of octree cell lists  */
-  REAL *x = octree->extents, p [3];
-  int i;
+  REAL *x = octree->extents, p [3], n [3];
+  struct face *face;
+  int i, type;
 
   if (y[3] < x[0] || y[4] < x[1] || y[5] < x[2] || y[0] > x[3] || y[1] > x[4] || y[2] > x[5]) return; /* doesn't overlap */
 
@@ -226,22 +347,52 @@ static void drop (struct octree *octree, short level, struct domain *domain, str
 
     i = 0;
 
-    if (p[0] > y[0] && p[0] < y[3]) i ++;
-    if (p[1] > y[1] && p[1] < y[4]) i ++;
-    if (p[2] > y[2] && p[2] < y[5]) i ++;
+    if (p[0] > y[0] && p[0] < y[3]) i |= 0x1;
+    if (p[1] > y[1] && p[1] < y[4]) i |= 0x2;
+    if (p[2] > y[2] && p[2] < y[5]) i |= 0x4;
 
-    if (i != 2) return; /* c and cell don't overlap through face */
+    switch (i)
+    {
+    case 3: /* xy */
+    if (p[2] < y[2]) { VECTOR (n, 0, 0, 1); type = 3; }
+    else { VECTOR (n, 0, 0, -1); type = -3; }
+    break;
+    case 5: /* xz */
+    if (p[1] < y[1]) { VECTOR (n, 0, 1, 0); type = 2; }
+    else { VECTOR (n, 0, -1, 0); type = -2; }
+    break;
+    case 6: /* yz */
+    if (p[0] < y[0]) { VECTOR (n, 1, 0, 0); type = 1; }
+    else { VECTOR (n, -1, 0, 0); type = -1; }
+    break;
+    default:
+    return; /* c and cell don't overlap through face */
+    }
 
-    ERRMEM (cell->adj = realloc (cell->adj, ((cell->nadj+1) * sizeof (struct cell*))));
-    ERRMEM (c->adj = realloc (c->adj, ((c->nadj+1) * sizeof (struct cell*))));
-    cell->adj [cell->nadj] = c;
-    c->adj [c->nadj] = cell;
-    cell->nadj ++;
-    c->nadj ++;
+    ERRMEM (face = calloc (1, sizeof (struct face)));
+    COPY (n, face->normal);
+#if 0
+    face->area = trim (cell, x, type, cutoff, face);
+#endif
+    face->leaf = NULL;
+    face->t = NULL;
+    face->n = 0;
+    face->adj = c;
+    face->next = cell->face;
+    cell->face = face;
+
+    ERRMEM (face = calloc  (1, sizeof (struct face)));
+    face->area = invert (cell->face, face);
+    face->leaf = NULL;
+    face->t = NULL;
+    face->n = 0;
+    face->adj = cell;
+    face->next = c->face;
+    c->face = face;
   }
   else if (octree->down [0])
   {
-    for (i = 0; i < 8; i ++) drop (octree->down [i], level+1, domain, c, y, l);
+    for (i = 0; i < 8; i ++) drop (octree->down [i], domain, cutoff, c, y);
   }
 }
 
@@ -283,7 +434,7 @@ static void collect_items (struct octree *octree, short level, struct domain *do
 IMPLEMENT_LIST_SORT (SINGLE_LINKED, sort_items, struct item, prev, next, LE)
 
 /* create cell adjacency */
-static void create_cell_adjacency (struct octree *octree, struct domain *domain)
+static void create_cell_adjacency (struct octree *octree, struct domain *domain, REAL cutoff)
 {
   struct item *item = NULL, *next;
 
@@ -295,7 +446,7 @@ static void create_cell_adjacency (struct octree *octree, struct domain *domain)
   {
     next = item->next;
 
-    drop (octree, 0, domain, item->cell, item->extents, item->level);
+    drop (octree, domain, cutoff, item->cell, item->extents);
 
     free (item);
   }
@@ -316,12 +467,12 @@ struct octree* octree_create (REAL extents [6])
 /* insert domain and refine octree down to a cutoff edge length */
 void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cutoff)
 {
-  REAL t [5][3][3], p [8][3], q [2][3], (*d) [8], (*s) [4][3], *x = octree->extents;
+  REAL t [5][3][3], p [8][3], q [2][3], (*d) [8], (*s) [3][3], *x = octree->extents, a;
   char allaccurate, inside, *flagged;
   int i, j, k, l, n, m, o, size;
   struct shape **leaf, **tmp;
+  struct face *list, *face;
   struct cell *cell;
-  struct triang *triang;
 
   VECTOR (p[0], x[0], x[1], x[2]);
   VECTOR (p[1], x[0], x[4], x[2]);
@@ -343,8 +494,8 @@ void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cu
       if (q[1][0] > domain->grid) goto recurse; /* assumption of cubic octants */
 
       ERRMEM (cell = calloc (1, sizeof (struct cell)));
-      cell->triang = NULL;
       cell->domain = domain;
+      cell->face = NULL;
       cell->next = octree->cell;
       octree->cell = cell;
     }
@@ -357,10 +508,10 @@ void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cu
   ERRMEM (flagged = calloc (n, 1))
   ERRMEM (tmp = malloc (n * sizeof (struct shape*)));
   ERRMEM (d = malloc (n * sizeof (REAL [8])));
-  ERRMEM (s = malloc (size * sizeof (REAL [4][3])));
+  ERRMEM (s = malloc (size * sizeof (REAL [3][3])));
 
   allaccurate = 1;
-  triang = NULL;
+  list = NULL;
 
   for (l = i = 0; i < n; i ++)
   {
@@ -439,19 +590,28 @@ void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cu
 
 	  if (m)
 	  {
-	    if (!triang) ERRMEM (triang = calloc (1, sizeof (struct triang)));
+	    ERRMEM (face = calloc (1, sizeof (struct face)));
 
-	    ERRMEM (triang->t = realloc (triang->t, (triang->n+m)* sizeof (REAL [4][3])));
+	    ERRMEM (face->t = malloc (m * sizeof (REAL [3][3])));
+
+	    face->area = 0;
 
 	    for (o = 0; o < m; o ++)
 	    {
-	      COPY (s [o][0], triang->t [triang->n+o][0]);
-	      COPY (s [o][1], triang->t [triang->n+o][1]);
-	      COPY (s [o][2], triang->t [triang->n+o][2]);
-	      COPY (s [o][3], triang->t [triang->n+o][3]);
+	      COPY (s [o][0], face->t [o][0]);
+	      COPY (s [o][1], face->t [o][1]);
+	      COPY (s [o][2], face->t [o][2]);
+	      TRIANGLE_AREA (s[o][0], s[o][1], s[o][2], a);
+	      face->area += a;
 	    }
 
-	    triang->n += m;
+	    leaf_normal (leaf[i], q[0], face->normal);
+	    NORMALIZE (face->normal);
+	    face->leaf = leaf[i];
+	    face->adj = NULL;
+	    face->n = m;
+	    face->next = list;
+	    list = face;
 	  }
 	}
       }
@@ -464,10 +624,10 @@ void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cu
   free (d);
   free (s);
 
-  if (triang || (allaccurate && inside)) /* triangulation was created or inner octant */
+  if (list || (allaccurate && inside)) /* triangulation was created or inner octant */
   {
     ERRMEM (cell = calloc (1, sizeof (struct cell)));
-    cell->triang = triang;
+    cell->face = list;
     cell->domain = domain;
     cell->next = octree->cell;
     octree->cell = cell;
@@ -526,26 +686,28 @@ recurse:
   }
 
 done:
-  if (!octree->up) create_cell_adjacency (octree, domain);
+  if (!octree->up) create_cell_adjacency (octree, domain, cutoff);
 }
 
 /* free octree memory */
 void octree_destroy (struct octree *octree)
 {
-  struct cell *cell, *next;
+  struct cell *cell;
+  struct face *face;
+  void *next;
   int i;
 
   if (octree->down [0]) for (i = 0; i < 8; i ++) octree_destroy (octree->down [i]);
 
   for (cell = octree->cell; cell; cell = next)
   {
-    next = cell->next;
-    if (cell->triang)
+    for (face = cell->face; face; face = next)
     {
-      free (cell->triang->t);
-      free (cell->triang);
-      free (cell->adj);
+      next = face->next;
+      if (face->t) free (face->t);
+      free (face);
     }
+    next = cell->next;
     free (cell);
   }
 
