@@ -1152,7 +1152,7 @@ void leaf_normal (struct shape *leaf, REAL *point, REAL *normal)
   struct cylinder *cylinder;
   struct sphere *sphere;
   struct fillet *fillet;
-  REAL a, b, v, z [3];
+  REAL a, b, v, q, z [3];
 
   switch (leaf->what)
   {
@@ -1194,9 +1194,9 @@ void leaf_normal (struct shape *leaf, REAL *point, REAL *normal)
 	leaf_normal (leaf->left, point, z);
 	leaf_normal (leaf->right, point, normal);
 
-	v = sqrt((a-v)*(a-v)+(b-v)*(b-v));
-	a = a / v;
-	b = b / v;
+	q = sqrt((a-v)*(a-v)+(b-v)*(b-v));
+	a = -(a-v) / q;
+	b = -(b-v) / q;
 	normal [0] = a*z[0] + b*normal[0];
 	normal [1] = a*z[1] + b*normal[1];
 	normal [2] = a*z[2] + b*normal[2];
@@ -1216,9 +1216,9 @@ void leaf_normal (struct shape *leaf, REAL *point, REAL *normal)
 	leaf_normal (leaf->left, point, z);
 	leaf_normal (leaf->right, point, normal);
 
-	v = sqrt((a-v)*(a-v)+(b-v)*(b-v));
-	a = -a / v;
-	b = -b / v;
+	q = sqrt((a-v)*(a-v)+(b-v)*(b-v));
+	a = (a-v) / q;
+	b = (b-v) / q;
 	normal [0] = a*z[0] + b*normal[0];
 	normal [1] = a*z[1] + b*normal[1];
 	normal [2] = a*z[2] + b*normal[2];

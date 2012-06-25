@@ -572,7 +572,7 @@ void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cu
     {
       if (flagged [i])
       {
-	for (j = k = 0; j < n; j ++)
+	for (m = j = k = 0; j < n; j ++)
 	{
 	  if (flagged [j] && j != i)
 	  {
@@ -585,34 +585,33 @@ void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cu
 
 	for (j = 0; j < l; j ++)
 	{
-	  m = 0;
 	  split (leaf[i], t[j], tmp, k, domain->shape, cutoff, &s, &m, &size); /* split against all other flagged leaves */
+        }
 
-	  if (m)
+	if (m)
+	{
+	  ERRMEM (face = calloc (1, sizeof (struct face)));
+
+	  ERRMEM (face->t = malloc (m * sizeof (REAL [3][3])));
+
+	  face->area = 0;
+
+	  for (o = 0; o < m; o ++)
 	  {
-	    ERRMEM (face = calloc (1, sizeof (struct face)));
-
-	    ERRMEM (face->t = malloc (m * sizeof (REAL [3][3])));
-
-	    face->area = 0;
-
-	    for (o = 0; o < m; o ++)
-	    {
-	      COPY (s [o][0], face->t [o][0]);
-	      COPY (s [o][1], face->t [o][1]);
-	      COPY (s [o][2], face->t [o][2]);
-	      TRIANGLE_AREA (s[o][0], s[o][1], s[o][2], a);
-	      face->area += a;
-	    }
-
-	    leaf_normal (leaf[i], q[0], face->normal);
-	    NORMALIZE (face->normal);
-	    face->leaf = leaf[i];
-	    face->adj = NULL;
-	    face->n = m;
-	    face->next = list;
-	    list = face;
+	    COPY (s [o][0], face->t [o][0]);
+	    COPY (s [o][1], face->t [o][1]);
+	    COPY (s [o][2], face->t [o][2]);
+	    TRIANGLE_AREA (s[o][0], s[o][1], s[o][2], a);
+	    face->area += a;
 	  }
+
+	  leaf_normal (leaf[i], q[0], face->normal);
+	  NORMALIZE (face->normal);
+	  face->leaf = leaf[i];
+	  face->adj = NULL;
+	  face->n = m;
+	  face->next = list;
+	  list = face;
 	}
       }
     }
