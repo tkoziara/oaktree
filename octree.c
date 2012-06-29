@@ -54,14 +54,14 @@ static void split (struct shape *src, REAL t [3][3], struct shape **leaf, int k,
     if (src == NULL) /* called from trim */
     {
       v = shape_evaluate (shape, d);
-      if (v < 0.0) /* include inner bits only */
+      if (v < -cutoff) /* include inner bits only */
       {
 	COPY (t[0], (*out) [*m][0]);
 	COPY (t[1], (*out) [*m][1]);
 	COPY (t[2], (*out) [*m][2]);
 	(*m) ++;
       }
-      else return;
+      return;
     }
 
     NORMAL (t[0], t[1], t[2], n);
@@ -221,7 +221,6 @@ done:
   }
 }
 
-#if 0
 /* trim internal face of a boundary cell and return its area */
 static REAL trim (struct cell *cell, REAL *x, int type, REAL cutoff, struct face *face)
 {
@@ -259,12 +258,44 @@ static REAL trim (struct cell *cell, REAL *x, int type, REAL cutoff, struct face
       split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
     break;
     case -2: /* -xz */
+      t[0][0] = x[0]; t[0][1] = x[1]; t[0][2] = x[2];
+      t[1][0] = x[3]; t[1][1] = x[1]; t[1][2] = x[5];
+      t[2][0] = x[0]; t[2][1] = x[1]; t[2][2] = x[5];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
+      t[0][0] = x[0]; t[0][1] = x[1]; t[0][2] = x[2];
+      t[1][0] = x[3]; t[1][1] = x[1]; t[1][2] = x[2];
+      t[2][0] = x[3]; t[2][1] = x[1]; t[2][2] = x[5];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
     break;
     case -1: /* -yz */
+      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[2];
+      t[1][0] = x[0]; t[1][1] = x[1]; t[1][2] = x[5];
+      t[2][0] = x[0]; t[2][1] = x[4]; t[2][2] = x[5];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
+      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[2];
+      t[1][0] = x[0]; t[1][1] = x[1]; t[1][2] = x[2];
+      t[2][0] = x[0]; t[2][1] = x[1]; t[2][2] = x[5];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
     break;
     case 1: /* yz */
+      t[0][0] = x[3]; t[0][1] = x[4]; t[0][2] = x[2];
+      t[1][0] = x[3]; t[1][1] = x[4]; t[1][2] = x[5];
+      t[2][0] = x[3]; t[2][1] = x[1]; t[2][2] = x[5];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
+      t[0][0] = x[3]; t[0][1] = x[4]; t[0][2] = x[2];
+      t[1][0] = x[3]; t[1][1] = x[1]; t[1][2] = x[5];
+      t[2][0] = x[3]; t[2][1] = x[1]; t[2][2] = x[2];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
     break;
     case 2: /* xz */
+      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[2];
+      t[1][0] = x[0]; t[1][1] = x[4]; t[1][2] = x[5];
+      t[2][0] = x[3]; t[2][1] = x[4]; t[2][2] = x[5];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
+      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[2];
+      t[1][0] = x[3]; t[1][1] = x[4]; t[1][2] = x[5];
+      t[2][0] = x[3]; t[2][1] = x[4]; t[2][2] = x[2];
+      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
     break;
     case 3: /* xy */
       t[0][0] = x[0]; t[0][1] = x[1]; t[0][2] = x[5];
@@ -280,17 +311,18 @@ static REAL trim (struct cell *cell, REAL *x, int type, REAL cutoff, struct face
 
     area = 0;
 
-    ASSERT (m, "ERROR!");
-
-    ERRMEM (face->t = malloc (m * sizeof (REAL [3][3])))
-
-    for (k = 0; k < m; k ++)
+    if (m)
     {
-      COPY (s [k][0], face->t [k][0]);
-      COPY (s [k][1], face->t [k][1]);
-      COPY (s [k][2], face->t [k][2]);
-      TRIANGLE_AREA (s[k][0], s[k][1], s[k][2], a);
-      area += a;
+      ERRMEM (face->t = malloc (m * sizeof (REAL [3][3])))
+
+      for (k = 0; k < m; k ++)
+      {
+	COPY (s [k][0], face->t [k][0]);
+	COPY (s [k][1], face->t [k][1]);
+	COPY (s [k][2], face->t [k][2]);
+	TRIANGLE_AREA (s[k][0], s[k][1], s[k][2], a);
+	area += a;
+      }
     }
 
     face->n = m;
@@ -301,7 +333,6 @@ static REAL trim (struct cell *cell, REAL *x, int type, REAL cutoff, struct face
 
   return area;
 }
-#endif
 
 /* invert input face into output face and return its area */
 static REAL invert (struct face *in, struct face *out)
@@ -312,7 +343,7 @@ static REAL invert (struct face *in, struct face *out)
   out->normal [1] = -in->normal[1];
   out->normal [2] = -in->normal[2];
 
-  if (in->t && out->leaf)
+  if (in->t)
   {
     ERRMEM (out->t = malloc (in->n * sizeof (REAL [3][3])));
 
@@ -370,25 +401,25 @@ static void drop (struct octree *octree, struct domain *domain, REAL cutoff, str
     }
 
     ERRMEM (face = calloc (1, sizeof (struct face)));
-    COPY (n, face->normal);
-#if 0
-    face->area = trim (cell, x, type, cutoff, face);
-#endif
-    face->leaf = NULL;
-    face->t = NULL;
-    face->n = 0;
-    face->adj = c;
-    face->next = cell->face;
-    cell->face = face;
 
-    ERRMEM (face = calloc  (1, sizeof (struct face)));
-    face->area = invert (cell->face, face);
-    face->leaf = NULL;
-    face->t = NULL;
-    face->n = 0;
-    face->adj = cell;
-    face->next = c->face;
-    c->face = face;
+    face->area = trim (cell, x, type, cutoff, face);
+
+    if (face->area > 0.0)
+    {
+      COPY (n, face->normal);
+      face->leaf = NULL;
+      face->adj = c;
+      face->next = cell->face;
+      cell->face = face;
+
+      ERRMEM (face = calloc  (1, sizeof (struct face)));
+      face->area = invert (cell->face, face);
+      face->leaf = NULL;
+      face->adj = cell;
+      face->next = c->face;
+      c->face = face;
+    }
+    else free (face);
   }
   else if (octree->down [0])
   {
