@@ -528,6 +528,7 @@ void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cu
       if (q[1][0] > domain->grid) goto recurse; /* assumption of cubic octants */
 
       ERRMEM (cell = calloc (1, sizeof (struct cell)));
+      cell->octree = octree;
       cell->domain = domain;
       cell->face = NULL;
       cell->next = octree->cell;
@@ -660,6 +661,7 @@ void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cu
   if (list || (allaccurate && inside)) /* triangulation was created or inner octant */
   {
     ERRMEM (cell = calloc (1, sizeof (struct cell)));
+    cell->octree = octree;
     cell->face = list;
     cell->domain = domain;
     cell->next = octree->cell;

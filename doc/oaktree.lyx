@@ -136,7 +136,7 @@ SIMULATION
 \end_layout
 
 \begin_layout Standard
-SIMULATION object stores data specific to one distinct analysis.
+SIMULATION object stores data specific to one simulation.
 \end_layout
 
 \begin_layout Subsection*
@@ -181,185 +181,6 @@ step
 cutoff
 \series default
  - cutoff length below which geometrical details are not resolved
-\end_layout
-
-\begin_layout Standard
-\begin_inset Note Note
-status open
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:MATERIAL"
-
-\end_inset
-
-MATERIAL
-\end_layout
-
-\begin_layout Plain Layout
-Solid material.
-\end_layout
-
-\begin_layout Subsection*
-obj = MATERIAL (simu, density, young, poisson)
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-obj
-\series default
- - MATERIAL object
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-simu
-\series default
- - simulation for which the material is defined
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-density
-\series default
- - mass density
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-young
-\series default
- - Young's modulus
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-poisson
-\series default
- - Poisson's ratio
-\end_layout
-
-\end_inset
-
-
-\begin_inset Note Note
-status open
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:CONTACT"
-
-\end_inset
-
-CONTACT
-\end_layout
-
-\begin_layout Plain Layout
-Contact properties between a pair of surfaces.
-\end_layout
-
-\begin_layout Subsection*
-CONTACT (simu, scolor1, scolor2, friction, restitution)
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-simu
-\series default
- - simulation for which the interface is defined
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-scolor1
-\series default
- - first surface color
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-scolor2
-\series default
- - second surface color
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-friction
-\series default
- - friction coefficient
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-restitution
-\series default
- - impact restitution
-\end_layout
-
-\end_inset
-
-
-\begin_inset Note Note
-status open
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:GLUE"
-
-\end_inset
-
-GLUE
-\end_layout
-
-\begin_layout Plain Layout
-Glue between a pair of surfaces.
-\end_layout
-
-\begin_layout Subsection*
-GLUE (simu, scolor1, scolor2)
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-simu
-\series default
- - simulation for which the interface is defined
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-scolor1
-\series default
- - first surface color
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-scolor2
-\series default
- - second surface color
-\end_layout
-
-\end_inset
-
-
 \end_layout
 
 \begin_layout Section
@@ -578,7 +399,7 @@ w
 scolor
 \series default
  - integer tuple 
-\begin_inset Formula $\left(s_{xmin},s_{ymax},s_{zmin},s_{xmax},s_{ymax},s_{zmax}\right)$
+\begin_inset Formula $\left(s_{xmin},s_{ymin},s_{zmin},s_{xmax},s_{ymax},s_{zmax}\right)$
 \end_inset
 
  of surface colors
@@ -984,19 +805,19 @@ scolor
 \begin_layout Section
 \begin_inset CommandInset label
 LatexCommand label
-name "sub:SOLID"
+name "sub:DOMAIN"
 
 \end_inset
 
-SOLID
+DOMAIN
 \end_layout
 
 \begin_layout Standard
-A solid is created in a simulation.
+A domain is created in a simulation.
 \end_layout
 
 \begin_layout Subsection*
-obj = SOLID (simu, shape | label, grid)
+obj = DOMAIN (simu, shape | label, grid)
 \end_layout
 
 \begin_layout Itemize
@@ -1004,7 +825,7 @@ obj = SOLID (simu, shape | label, grid)
 \series bold
 obj
 \series default
- - SOLID object
+ - DOMAIN object
 \end_layout
 
 \begin_layout Itemize
@@ -1012,7 +833,7 @@ obj
 \series bold
 simu
 \series default
- - simulation in which the solid is created
+ - simulation in which the domain is created
 \end_layout
 
 \begin_layout Itemize
@@ -1020,7 +841,7 @@ simu
 \series bold
 shape
 \series default
- - solid shape
+ - domain shape
 \end_layout
 
 \begin_layout Itemize
@@ -1028,7 +849,7 @@ shape
 \series bold
 label
 \series default
- - solid label (default: none)
+ - domain label (default: none)
 \end_layout
 
 \begin_layout Itemize
@@ -1036,150 +857,7 @@ label
 \series bold
 grid
 \series default
- - maximal finite element grid size for this solid (default: none)
-\end_layout
-
-\begin_layout Standard
-\begin_inset Note Note
-status open
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:FIX"
-
-\end_inset
-
-FIX
-\end_layout
-
-\begin_layout Plain Layout
-Fix surface.
-\end_layout
-
-\begin_layout Subsection*
-FIX (solid, scolor | direction)
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-solid
-\series default
- - SOLID object
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-scolor
-\series default
- - surface color
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-direction
-\series default
- - either 'ALL' or 'NORMAL' (default: 'ALL')
-\end_layout
-
-\end_inset
-
-
-\emph on
-
-\begin_inset Note Note
-status open
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:PRESSURE"
-
-\end_inset
-
-PRESSURE
-\end_layout
-
-\begin_layout Plain Layout
-Define surface pressure.
-\end_layout
-
-\begin_layout Subsection*
-PRESSURE (solid, scolor, pressure)
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-solid
-\series default
- - SOLID object
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-scolor
-\series default
- - surface color
-\end_layout
-
-\begin_layout Itemize
-
-\series bold
-pressure
-\series default
- - constant value or Python function: 
-\emph on
-value = pressure (time)
-\end_layout
-
-\end_inset
-
-
-\begin_inset Note Note
-status open
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:SOURCE"
-
-\end_inset
-
-SOURCE
-\end_layout
-
-\begin_layout Plain Layout
-Fluid or soild source.
-\end_layout
-
-\end_inset
-
-
-\begin_inset Note Note
-status open
-
-\begin_layout Section
-\begin_inset CommandInset label
-LatexCommand label
-name "sub:SINK"
-
-\end_inset
-
-SINK
-\end_layout
-
-\begin_layout Plain Layout
-Fluid or soild sink.
-\end_layout
-
-\end_inset
-
-
+ - maximal discretization grid size for this domain (default: none)
 \end_layout
 
 \begin_layout Chapter

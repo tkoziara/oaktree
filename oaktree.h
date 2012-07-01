@@ -109,6 +109,8 @@ struct face
 
 struct cell
 {
+  struct octree *octree;
+
   struct domain *domain;
 
   struct face *face;
