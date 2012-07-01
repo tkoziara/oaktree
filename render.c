@@ -115,7 +115,7 @@ void render_domains (struct octree *octree)
 /* render cells */
 void render_cells (struct octree *octree)
 {
-  REAL e [6], w, *x;
+  REAL p [3], q [3], *x;
   struct cell *cell;
   struct face *face;
   int i, j;
@@ -127,91 +127,29 @@ void render_cells (struct octree *octree)
 
   x = octree->extents;
 
+  MID (x, x+3, p);
+
   for (cell = octree->cell; cell; cell = cell->next)
   {
-    if (cell->face->t) /* surface */
+    glBegin (GL_TRIANGLES);
+
+    glColor4f (0.6, 0.6, 0.6, 0.3);
+
+    for (face = cell->face; face; face = face->next)
     {
-      MID (x, x+3, e);
+      glNormal3f (face->normal[0], face->normal[1], face->normal[2]);
 
-      glBegin (GL_TRIANGLES);
-
-      glColor4f (0.6, 0.6, 0.6, 0.3);
-
-      for (face = cell->face; face; face = face->next)
+      for (i = 0; i < face->n; i++)
       {
-        glNormal3f (face->normal[0], face->normal[1], face->normal[2]);
-
-	for (i = 0; i < face->n; i++)
+	for (j = 0; j < 3; j ++)
 	{
-	  for (j = 0; j < 3; j ++)
-	  {
-	    SUB (face->t[i][j], e, e+3);
-	    ADDMUL (e, 0.8, e+3, e+3);
-	    glVertex3f (e[3], e[4], e[5]);
-	  }
+	  SUB (face->t[i][j], p, q);
+	  ADDMUL (p, 0.8, q, q);
+	  glVertex3f (q[0], q[1], q[2]);
 	}
       }
-
-      glEnd ();
     }
-    else
-    {
-      w = 0.1*(x[3]-x[0]);
 
-      e[0] = x[0] + w;
-      e[1] = x[1] + w;
-      e[2] = x[2] + w;
-      e[3] = x[3] - w;
-      e[4] = x[4] - w;
-      e[5] = x[5] - w;
-
-      glBegin (GL_QUADS);
-
-      glColor4f (0.6, 0.6, 0.6, 0.3);
-
-	/* lower base */
-      glNormal3f (0, 0, -1);
-      glVertex3f (e[0], e[1], e[2]);
-      glVertex3f (e[0], e[4], e[2]);
-      glVertex3f (e[3], e[4], e[2]);
-      glVertex3f (e[3], e[1], e[2]);
-
-      /* upper base */
-      glNormal3f (0, 0, 1);
-      glVertex3f (e[0], e[1], e[5]);
-      glVertex3f (e[3], e[1], e[5]);
-      glVertex3f (e[3], e[4], e[5]);
-      glVertex3f (e[0], e[4], e[5]);
-
-      /* y low */
-      glNormal3f (0, -1, 0);
-      glVertex3f (e[0], e[1], e[2]);
-      glVertex3f (e[3], e[1], e[2]);
-      glVertex3f (e[3], e[1], e[5]);
-      glVertex3f (e[0], e[1], e[5]);
-
-      /* y high */
-      glNormal3f (0, 1, 0);
-      glVertex3f (e[0], e[4], e[2]);
-      glVertex3f (e[0], e[4], e[5]);
-      glVertex3f (e[3], e[4], e[5]);
-      glVertex3f (e[3], e[4], e[2]);
-
-      /* x low */
-      glNormal3f (-1, 0, 0);
-      glVertex3f (e[0], e[1], e[2]);
-      glVertex3f (e[0], e[1], e[5]);
-      glVertex3f (e[0], e[4], e[5]);
-      glVertex3f (e[0], e[4], e[2]);
-
-      /* x high */
-      glNormal3f (1, 0, 0);
-      glVertex3f (e[3], e[1], e[2]);
-      glVertex3f (e[3], e[4], e[2]);
-      glVertex3f (e[3], e[4], e[5]);
-      glVertex3f (e[3], e[1], e[5]);
-
-      glEnd ();
-    }
+    glEnd ();
   }
 }

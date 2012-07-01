@@ -13,6 +13,8 @@
 #include "sort.h"
 #include "alg.h"
 
+#define PRIMITIVES_PER_OCTANT 4
+
 /* accuracy test */
 static int accurate (REAL q [3], REAL d [8], struct shape *shape, REAL cutoff)
 {
@@ -224,112 +226,113 @@ done:
 /* trim internal face of a boundary cell and return its area */
 static REAL trim (struct cell *cell, REAL *x, int type, REAL cutoff, struct face *face)
 {
-  REAL t [3][3], (*s) [3][3];
-  struct shape *leaf [5]; /* XXX */
+  struct shape *leaf [PRIMITIVES_PER_OCTANT];
+  REAL t0 [3][3], t1 [3][3], (*s) [3][3];
+  REAL a, area = 0.0;
+  int n, m, size;
   struct face *f;
-  int k, m, size;
-  REAL area, a;
 
-  for (k = 0, f = cell->face; f; f = f->next)
+  switch (type)
   {
-    if (f->leaf) leaf [k] = f->leaf, k ++;
+  case -3: /* -xy */
+    t0[0][0] = x[0]; t0[0][1] = x[1]; t0[0][2] = x[2];
+    t0[1][0] = x[0]; t0[1][1] = x[4]; t0[1][2] = x[2];
+    t0[2][0] = x[3]; t0[2][1] = x[1]; t0[2][2] = x[2];
+    t1[0][0] = x[0]; t1[0][1] = x[4]; t1[0][2] = x[2];
+    t1[1][0] = x[3]; t1[1][1] = x[4]; t1[1][2] = x[2];
+    t1[2][0] = x[3]; t1[2][1] = x[1]; t1[2][2] = x[2];
+  break;
+  case -2: /* -xz */
+    t0[0][0] = x[0]; t0[0][1] = x[1]; t0[0][2] = x[2];
+    t0[1][0] = x[3]; t0[1][1] = x[1]; t0[1][2] = x[5];
+    t0[2][0] = x[0]; t0[2][1] = x[1]; t0[2][2] = x[5];
+    t1[0][0] = x[0]; t1[0][1] = x[1]; t1[0][2] = x[2];
+    t1[1][0] = x[3]; t1[1][1] = x[1]; t1[1][2] = x[2];
+    t1[2][0] = x[3]; t1[2][1] = x[1]; t1[2][2] = x[5];
+  break;
+  case -1: /* -yz */
+    t0[0][0] = x[0]; t0[0][1] = x[4]; t0[0][2] = x[2];
+    t0[1][0] = x[0]; t0[1][1] = x[1]; t0[1][2] = x[5];
+    t0[2][0] = x[0]; t0[2][1] = x[4]; t0[2][2] = x[5];
+    t1[0][0] = x[0]; t1[0][1] = x[4]; t1[0][2] = x[2];
+    t1[1][0] = x[0]; t1[1][1] = x[1]; t1[1][2] = x[2];
+    t1[2][0] = x[0]; t1[2][1] = x[1]; t1[2][2] = x[5];
+  break;
+  case 1: /* yz */
+    t0[0][0] = x[3]; t0[0][1] = x[4]; t0[0][2] = x[2];
+    t0[1][0] = x[3]; t0[1][1] = x[4]; t0[1][2] = x[5];
+    t0[2][0] = x[3]; t0[2][1] = x[1]; t0[2][2] = x[5];
+    t1[0][0] = x[3]; t1[0][1] = x[4]; t1[0][2] = x[2];
+    t1[1][0] = x[3]; t1[1][1] = x[1]; t1[1][2] = x[5];
+    t1[2][0] = x[3]; t1[2][1] = x[1]; t1[2][2] = x[2];
+  break;
+  case 2: /* xz */
+    t0[0][0] = x[0]; t0[0][1] = x[4]; t0[0][2] = x[2];
+    t0[1][0] = x[0]; t0[1][1] = x[4]; t0[1][2] = x[5];
+    t0[2][0] = x[3]; t0[2][1] = x[4]; t0[2][2] = x[5];
+    t1[0][0] = x[0]; t1[0][1] = x[4]; t1[0][2] = x[2];
+    t1[1][0] = x[3]; t1[1][1] = x[4]; t1[1][2] = x[5];
+    t1[2][0] = x[3]; t1[2][1] = x[4]; t1[2][2] = x[2];
+  break;
+  case 3: /* xy */
+    t0[0][0] = x[0]; t0[0][1] = x[1]; t0[0][2] = x[5];
+    t0[1][0] = x[3]; t0[1][1] = x[1]; t0[1][2] = x[5];
+    t0[2][0] = x[0]; t0[2][1] = x[4]; t0[2][2] = x[5];
+    t1[0][0] = x[0]; t1[0][1] = x[4]; t1[0][2] = x[5];
+    t1[1][0] = x[3]; t1[1][1] = x[1]; t1[1][2] = x[5];
+    t1[2][0] = x[3]; t1[2][1] = x[4]; t1[2][2] = x[5];
+  break;
   }
 
-#if DEBUG
-  ASSERT (k < 5, "ERROR!");
-#endif
+  for (n = 0, f = cell->face; f; f = f->next)
+  {
+    if (f->leaf) leaf [n] = f->leaf, n ++;
+  }
 
-  if (k)
+  if (n != 0)
   {
     m = 0;
     size = 8;
     ERRMEM (s = malloc (size * sizeof (REAL [3][3])));
 
-    switch (type)
-    {
-    case -3: /* -xy */
-      t[0][0] = x[0]; t[0][1] = x[1]; t[0][2] = x[2];
-      t[1][0] = x[0]; t[1][1] = x[4]; t[1][2] = x[2];
-      t[2][0] = x[3]; t[2][1] = x[1]; t[2][2] = x[2];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[2];
-      t[1][0] = x[3]; t[1][1] = x[4]; t[1][2] = x[2];
-      t[2][0] = x[3]; t[2][1] = x[1]; t[2][2] = x[2];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-    break;
-    case -2: /* -xz */
-      t[0][0] = x[0]; t[0][1] = x[1]; t[0][2] = x[2];
-      t[1][0] = x[3]; t[1][1] = x[1]; t[1][2] = x[5];
-      t[2][0] = x[0]; t[2][1] = x[1]; t[2][2] = x[5];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-      t[0][0] = x[0]; t[0][1] = x[1]; t[0][2] = x[2];
-      t[1][0] = x[3]; t[1][1] = x[1]; t[1][2] = x[2];
-      t[2][0] = x[3]; t[2][1] = x[1]; t[2][2] = x[5];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-    break;
-    case -1: /* -yz */
-      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[2];
-      t[1][0] = x[0]; t[1][1] = x[1]; t[1][2] = x[5];
-      t[2][0] = x[0]; t[2][1] = x[4]; t[2][2] = x[5];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[2];
-      t[1][0] = x[0]; t[1][1] = x[1]; t[1][2] = x[2];
-      t[2][0] = x[0]; t[2][1] = x[1]; t[2][2] = x[5];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-    break;
-    case 1: /* yz */
-      t[0][0] = x[3]; t[0][1] = x[4]; t[0][2] = x[2];
-      t[1][0] = x[3]; t[1][1] = x[4]; t[1][2] = x[5];
-      t[2][0] = x[3]; t[2][1] = x[1]; t[2][2] = x[5];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-      t[0][0] = x[3]; t[0][1] = x[4]; t[0][2] = x[2];
-      t[1][0] = x[3]; t[1][1] = x[1]; t[1][2] = x[5];
-      t[2][0] = x[3]; t[2][1] = x[1]; t[2][2] = x[2];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-    break;
-    case 2: /* xz */
-      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[2];
-      t[1][0] = x[0]; t[1][1] = x[4]; t[1][2] = x[5];
-      t[2][0] = x[3]; t[2][1] = x[4]; t[2][2] = x[5];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[2];
-      t[1][0] = x[3]; t[1][1] = x[4]; t[1][2] = x[5];
-      t[2][0] = x[3]; t[2][1] = x[4]; t[2][2] = x[2];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-    break;
-    case 3: /* xy */
-      t[0][0] = x[0]; t[0][1] = x[1]; t[0][2] = x[5];
-      t[1][0] = x[3]; t[1][1] = x[1]; t[1][2] = x[5];
-      t[2][0] = x[0]; t[2][1] = x[4]; t[2][2] = x[5];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-      t[0][0] = x[0]; t[0][1] = x[4]; t[0][2] = x[5];
-      t[1][0] = x[3]; t[1][1] = x[1]; t[1][2] = x[5];
-      t[2][0] = x[3]; t[2][1] = x[4]; t[2][2] = x[5];
-      split (NULL, t, leaf, k, cell->domain->shape, cutoff, &s, &m, &size);
-    break;
-    }
+    split (NULL, t0, leaf, n, cell->domain->shape, cutoff, &s, &m, &size);
+    split (NULL, t1, leaf, n, cell->domain->shape, cutoff, &s, &m, &size);
 
-    area = 0;
-
-    if (m)
+    if (m != 0)
     {
       ERRMEM (face->t = malloc (m * sizeof (REAL [3][3])))
 
-      for (k = 0; k < m; k ++)
+      for (n = 0; n < m; n ++)
       {
-	COPY (s [k][0], face->t [k][0]);
-	COPY (s [k][1], face->t [k][1]);
-	COPY (s [k][2], face->t [k][2]);
-	TRIANGLE_AREA (s[k][0], s[k][1], s[k][2], a);
+	COPY (s [n][0], face->t [n][0]);
+	COPY (s [n][1], face->t [n][1]);
+	COPY (s [n][2], face->t [n][2]);
+	TRIANGLE_AREA (s[n][0], s[n][1], s[n][2], a);
 	area += a;
       }
-    }
 
-    face->n = m;
+      face->n = m;
+    }
 
     free (s);
   }
-  else area = (x[3]-x[0])*(x[3]-x[0]); /* XXX assumption of cubic cells */
+  else
+  {
+    ERRMEM (face->t = malloc (2 * sizeof (REAL [3][3])))
+
+    COPY (t0 [0], face->t [0][0]);
+    COPY (t0 [1], face->t [0][1]);
+    COPY (t0 [2], face->t [0][2]);
+    TRIANGLE_AREA (t0[0], t0[1], t0[2], a);
+    area += a;
+    COPY (t1 [0], face->t [1][0]);
+    COPY (t1 [1], face->t [1][1]);
+    COPY (t1 [2], face->t [1][2]);
+    TRIANGLE_AREA (t1[0], t1[1], t1[2], a);
+    area += a;
+
+    face->n = 2;
+  }
 
   return area;
 }
@@ -593,7 +596,7 @@ void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cu
 
   /* recurse down the tree if too many leaves */
 
-  if (allaccurate && l > 4) allaccurate = 0; /* 4 is arbitrary XXX */
+  if (allaccurate && l > PRIMITIVES_PER_OCTANT) allaccurate = 0; /* XXX: arbitrary threshold */
 
   /* if all leaves are accorate extract triangles */
 
@@ -734,7 +737,7 @@ void octree_destroy (struct octree *octree)
     for (face = cell->face; face; face = next)
     {
       next = face->next;
-      if (face->t) free (face->t);
+      free (face->t);
       free (face);
     }
     next = cell->next;
