@@ -33,8 +33,8 @@ LAPACK = -L/usr/lib -llapack
 # Python
 #
 
-PYTHON = -I/Library/Frameworks/Python.framework/Versions/Current/include/python2.7
-PYTHONLIB = -framework Python
+PYTHON = -I/usr/include/python2.6
+PYTHONLIB = -L/usr/lib -lpython2.6
 
 #
 # OpenGL (yes/no)
@@ -54,5 +54,5 @@ VBO = yes
 # MPI (yes/no)
 #
 
-MPI = yes
+MPI = no
 MPICC = mpicc

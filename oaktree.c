@@ -307,7 +307,7 @@ int main (int argc, char **argv)
 #endif
   char *path = getfile (argc, argv);
 
-  if (!path) printf (synopsis);
+  if (!path) printf ("%s", synopsis);
   else inputerror = input (path);
 
   if (!inputerror)
