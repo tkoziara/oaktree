@@ -814,6 +814,53 @@ static PyObject* POLYGON (PyObject *self, PyObject *args, PyObject *kwds)
   return (PyObject*)out;
 }
 
+/* create sphere */
+static PyObject* MLS__ (PyObject *self, PyObject *args, PyObject *kwds)
+{
+  KEYWORDS ("op", "r", "scolor");
+  int scolor, n, i, j;
+  PyObject *op, *x;
+  struct mls *mls;
+  double r;
+  SHAPE *out;
+
+  out = (SHAPE*)SHAPE_TYPE.tp_alloc (&SHAPE_TYPE, 0);
+
+  if (out)
+  {
+    PARSEKEYS ("Odi", &op, &r, &scolor);
+
+    n = is_list_of_tuples (op, kwl[0], 1, 6);
+
+    TYPETEST (n && is_positive (r, kwl[1]));
+
+    ERRMEM (out->ptr = calloc (1, sizeof (struct shape)));
+    ERRMEM (mls = malloc (sizeof (struct mls)));
+    ERRMEM (mls->op = malloc (n * sizeof (REAL [6])));
+
+    for (i = 0; i < n; i ++)
+    {
+      x = PyList_GetItem (op, i);
+
+      for (j = 0; j < 6; j ++)
+      {
+        mls->op [i][j] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (x, j));
+      }
+
+      NORMALIZE (mls->op[i]+3);
+    }
+    mls->nop = n;
+    mls->r = r;
+    mls->s = 1.0;
+    mls->scolor = scolor;
+
+    out->ptr->what = MLS;
+    out->ptr->data = mls;
+  }
+
+  return (PyObject*)out;
+}
+
 /* copy shape */
 static PyObject* COPY__ (PyObject *self, PyObject *args, PyObject *kwds) /* COPY__ => alg.h has a macro COPY */
 {
@@ -980,6 +1027,7 @@ static PyMethodDef methods [] =
   {"CYLINDER", (PyCFunction)CYLINDER, METH_VARARGS|METH_KEYWORDS, "Create cylinder"},
   {"CUBE", (PyCFunction)CUBE, METH_VARARGS|METH_KEYWORDS, "Create cube"},
   {"POLYGON", (PyCFunction)POLYGON, METH_VARARGS|METH_KEYWORDS, "Create polygon"},
+  {"MLS", (PyCFunction)MLS__, METH_VARARGS|METH_KEYWORDS, "Create moving least square fit"},
   {"COPY", (PyCFunction)COPY__, METH_VARARGS|METH_KEYWORDS, "Copy shape"},
   {"UNION", (PyCFunction)UNION, METH_VARARGS|METH_KEYWORDS, "Union of shapes"},
   {"INTERSECTION", (PyCFunction)INTERSECTION, METH_VARARGS|METH_KEYWORDS, "Intersection of shapes"},
@@ -1045,6 +1093,7 @@ int input (const char *path)
                      "from oaktree import CYLINDER\n"
                      "from oaktree import CUBE\n"
                      "from oaktree import POLYGON\n"
+                     "from oaktree import MLS\n"
                      "from oaktree import COPY\n"
                      "from oaktree import UNION\n"
                      "from oaktree import INTERSECTION\n"

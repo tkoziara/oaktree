@@ -31,6 +31,7 @@ static int leaves_count (struct shape *shape)
   case HSP:
   case SPH:
   case CYL:
+  case MLS:
   case FLT:
     return 1;
     break;
@@ -43,7 +44,6 @@ static int leaves_count (struct shape *shape)
 static void leaves_within_sphere (struct shape *shape, REAL c [3], REAL r, struct shape **leaves, int *i)
 {
   struct halfspace *halfspace;
-  struct cylinder *cylinder;
   struct sphere *sphere;
   struct fillet *fillet;
   REAL d [4];
@@ -112,7 +112,7 @@ static void leaves_within_sphere (struct shape *shape, REAL c [3], REAL r, struc
     }
     break;
   case CYL:
-    cylinder = shape->data;
+  case MLS:
     d [3] = shape_evaluate (shape, c);
 
     if (fabs (d[3]) <= r)
@@ -257,6 +257,9 @@ static int compare_leaves (struct shape **ll, struct shape **rr)
       else return u < 0 ? -1 : 1;
     }
     break;
+    case MLS:
+      return (*ll) < (*rr) ? -1 : (*ll) > (*rr) ? 1 : 0; /* XXX: no comparison for mls */
+    break;
     default:
     break;
   }
@@ -290,6 +293,13 @@ static int subtracted (struct shape *shape)
   case CYL:
     {
       struct cylinder *data = shape->data;
+
+      return data->s == -1;
+    }
+    break;
+  case MLS:
+    {
+      struct mls *data = shape->data;
 
       return data->s == -1;
     }
@@ -563,6 +573,20 @@ static struct shape* offset (struct shape *shape, REAL distance)
       data->r += distance;
     }
     break;
+  case MLS:
+    {
+      struct mls *data = copy->data;
+
+      distance *= data->s;
+
+      for (int i = 0; i < data->nop; i ++)
+      {
+	REAL *p = data->op [i], *n = p + 3;
+
+	ADDMUL (p, distance, n, p);
+      }
+    }
+    break;
   }
 
   return copy;
@@ -681,6 +705,21 @@ struct shape* shape_copy (struct shape *shape)
       copy->data = data;
     }
     break;
+  case MLS:
+    {
+      struct mls *out, *in = shape->data;
+
+      ERRMEM (out = malloc (sizeof (struct mls)));
+      memcpy (out, in, sizeof (struct mls));
+      ERRMEM (out->op = malloc (in->nop * sizeof (REAL [6])));
+      for (int i = 0; i < in->nop; i ++)
+      {
+	COPY6 (in->op[i], out->op[i]);
+      }
+
+      copy->data = out;
+    }
+    break;
   case FLT:
     {
       struct fillet *data;
@@ -735,6 +774,13 @@ struct shape* shape_invert (struct shape *shape)
   case CYL:
     {
       struct cylinder *data = shape->data;
+
+      data->s *= -1.0;
+    }
+    break;
+  case MLS:
+    {
+      struct mls *data = shape->data;
 
       data->s *= -1.0;
     }
@@ -803,6 +849,16 @@ void shape_move (struct shape *shape, REAL *vector)
       ACC (vector, data->p);
     }
     break;
+  case MLS:
+    {
+      struct mls *data = shape->data;
+
+      for (int i = 0; i < data->nop; i ++)
+      {
+        ACC (vector, data->op[i]);
+      }
+    }
+    break;
   }
 }
 
@@ -845,6 +901,19 @@ void shape_rotate (struct shape *shape, REAL *point, REAL *matrix)
       NVADDMUL (point, matrix, v, data->p);
       COPY (data->d, v);
       NVMUL (matrix, v, data->d);
+    }
+    break;
+  case MLS:
+    {
+      struct mls *data = shape->data;
+
+      for (int i = 0; i < data->nop; i ++)
+      {
+	SUB (data->op[i], point, v);
+	NVADDMUL (point, matrix, v, data->op[i]);
+	COPY (data->op[i]+3, v);
+	NVMUL (matrix, v, data->op[i]+3);
+      }
     }
     break;
   }
@@ -975,7 +1044,8 @@ REAL shape_evaluate (struct shape *shape, REAL *point)
   struct cylinder *cylinder;
   struct sphere *sphere;
   struct fillet *fillet;
-  REAL a, b, v, z [3];
+  struct mls *mls;
+  REAL a, b, v, q, z [3];
 
   switch (shape->what)
   {
@@ -1009,6 +1079,20 @@ REAL shape_evaluate (struct shape *shape, REAL *point)
     if (b < a) b = 0.5*((b*b)/a + a); /* smooth out inside with y = x**2/(2r) + r/2 */
     v = cylinder->s * (b - a);
     break;
+  case MLS:
+    mls = shape->data;
+    a = b = 0.0;
+    q = mls->r * mls->r;
+    for (int i = 0; i < mls->nop; i ++)
+    {
+      SUB (point, mls->op[i], z);
+      v = DOT (z, z);
+      v = exp (- v / q);
+      a += DOT (mls->op[i]+3, z) * v;
+      b += v;
+    }
+    v = mls->s * a / b;
+    break;
   case FLT:
     fillet = shape->data;
     v = fillet->r;
@@ -1037,6 +1121,7 @@ void shape_extents (struct shape *shape, REAL *extents)
 {
   struct halfspace *halfspace;
   struct sphere *sphere;
+  struct mls *mls;
   REAL l [6], r [6];
 
   switch (shape->what)
@@ -1093,6 +1178,31 @@ void shape_extents (struct shape *shape, REAL *extents)
     extents [3] = -FLT_MAX;
     extents [4] = -FLT_MAX;
     extents [5] = -FLT_MAX;
+    break;
+  case MLS:
+    mls = shape->data; 
+    extents [0] = FLT_MAX;
+    extents [1] = FLT_MAX;
+    extents [2] = FLT_MAX;
+    extents [3] = -FLT_MAX;
+    extents [4] = -FLT_MAX;
+    extents [5] = -FLT_MAX;
+    for (int i = 0; i < mls->nop; i ++)
+    {
+      REAL *p = mls->op[i];
+      if (p[0] < extents[0]) extents[0] = p[0];
+      if (p[1] < extents[1]) extents[1] = p[1];
+      if (p[2] < extents[2]) extents[2] = p[2];
+      if (p[0] > extents[3]) extents[3] = p[0];
+      if (p[1] > extents[4]) extents[4] = p[1];
+      if (p[2] > extents[5]) extents[5] = p[2];
+    }
+    extents [0] -= mls->r * 2;
+    extents [1] -= mls->r * 2;
+    extents [2] -= mls->r * 2;
+    extents [3] += mls->r * 2;
+    extents [4] += mls->r * 2;
+    extents [5] += mls->r * 2;
     break;
   }
 }
@@ -1152,6 +1262,7 @@ void leaf_normal (struct shape *leaf, REAL *point, REAL *normal)
   struct cylinder *cylinder;
   struct sphere *sphere;
   struct fillet *fillet;
+  struct mls *mls;
   REAL a, b, v, q, z [3];
 
   switch (leaf->what)
@@ -1176,6 +1287,22 @@ void leaf_normal (struct shape *leaf, REAL *point, REAL *normal)
     a = DOT (z, cylinder->d);
     SUBMUL (z, a, cylinder->d, normal);
     SCALE (normal, cylinder->s);
+    break;
+  case MLS:
+    mls = leaf->data;
+    b = 0.0;
+    SET (normal, 0);
+    q = mls->r * mls->r;
+    for (int i = 0; i < mls->nop; i ++)
+    {
+      SUB (point, mls->op[i], z);
+      v = DOT (z, z);
+      v = exp (- v / q);
+      ADDMUL (normal, v, mls->op[i]+3, normal);
+      b += v;
+    }
+    DIV (normal, b, normal);
+    SCALE (normal, mls->s);
     break;
   case FLT:
     fillet = leaf->data;
@@ -1244,6 +1371,8 @@ int shape_leaf_in_union (struct shape *leaf)
 /* free shape memory */
 void shape_destroy (struct shape *shape)
 {
+  struct mls *mls;
+
   switch (shape->what)
   {
   case ADD:
@@ -1260,6 +1389,11 @@ void shape_destroy (struct shape *shape)
   case SPH:
   case CYL:
     free (shape->data);
+    break;
+  case MLS:
+    mls = shape->data;
+    free (mls->op);
+    free (mls);
     break;
   }
 

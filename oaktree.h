@@ -27,6 +27,15 @@ struct cylinder
   short scolor;
 };
 
+struct mls
+{
+  REAL (*op) [6], r, s;
+
+  int nop;
+
+  short scolor;
+};
+
 struct fillet
 {
   REAL r;
@@ -36,7 +45,7 @@ struct fillet
 
 struct shape
 {
-  enum {ADD, MUL, HSP, SPH, CYL, FLT} what;
+  enum {ADD, MUL, HSP, SPH, CYL, MLS, FLT} what;
 
   void *data;
 
