@@ -198,7 +198,6 @@ static void passive (int x, int y)
 /* initialize simulation */
 static void initialize (struct simulation *simulation)
 {
-  struct domain *domain;
   REAL e [6], g [6];
   struct timing t;
   double dt;
@@ -211,6 +210,9 @@ static void initialize (struct simulation *simulation)
   g [3] = -FLT_MAX;
   g [4] = -FLT_MAX;
   g [5] = -FLT_MAX;
+
+#if 1
+  struct domain *domain;
 
   for (domain = simulation->domain; domain; domain = domain->next)
   {
@@ -249,6 +251,47 @@ static void initialize (struct simulation *simulation)
   {
     octree_insert_domain (simulation->octree, domain, simulation->cutoff);
   }
+#else
+
+  REAL *triang, *p, cutoff = 1;
+  int count;
+
+  triang = stlread ("inp/part.stl", &count);
+
+  for (p = triang; p < triang+count*9; p += 3)
+  {
+    if (p[0] < g[0]) g[0] = p[0];
+    if (p[1] < g[1]) g[1] = p[1];
+    if (p[2] < g[2]) g[2] = p[2];
+    if (p[0] > g[3]) g[3] = p[0];
+    if (p[1] > g[4]) g[4] = p[1];
+    if (p[2] > g[5]) g[5] = p[2];
+  }
+
+  g [0] -= cutoff;
+  g [1] -= cutoff;
+  g [2] -= cutoff;
+  g [3] += cutoff;
+  g [4] += cutoff;
+  g [5] += cutoff;
+
+  SUB (g+3, g, e);
+  MAXABS (e, e[3]);
+  MID (g+3, g, e);
+  e[3] = 0.5*e[3];
+  g [0] = e[0] - e[3];
+  g [1] = e[1] - e[3];
+  g [2] = e[2] - e[3];
+  g [3] = e[0] + e[3];
+  g [4] = e[1] + e[3];
+  g [5] = e[2] + e[3];
+  COPY6 (g, simulation->extents); /* centered cube */
+
+  simulation->octree = octree_create (simulation->extents);
+
+  //octree_insert_triangles (simulation->octree, triang+1045*9, 5, cutoff);
+  octree_insert_triangles (simulation->octree, triang, count, cutoff);
+#endif
 
   dt = timerend (&t);
 

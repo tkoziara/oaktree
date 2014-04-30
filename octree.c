@@ -13,7 +13,7 @@
 #include "sort.h"
 #include "alg.h"
 
-#define PRIMITIVES_PER_OCTANT 4
+#define PRIMITIVES_PER_OCTANT 24
 
 /* accuracy test */
 static int accurate (REAL q [3], REAL d [8], struct shape *shape, REAL cutoff)
@@ -722,6 +722,144 @@ recurse:
 
 done:
   if (!octree->up) create_cell_adjacency (octree, domain, cutoff);
+}
+
+/* insert triangles into octree */
+void octree_insert_triangles (struct octree *octree, REAL *triang, int count, REAL cutoff)
+{
+  REAL p [8][3], q [2][3], y[6], *copy, *x = octree->extents, *t, *c;
+  int size, i, j, k;
+
+  VECTOR (p[0], x[0], x[1], x[2]);
+  VECTOR (p[1], x[0], x[4], x[2]);
+  VECTOR (p[2], x[3], x[4], x[2]);
+  VECTOR (p[3], x[3], x[1], x[2]);
+  VECTOR (p[4], x[0], x[1], x[5]);
+  VECTOR (p[5], x[0], x[4], x[5]);
+  VECTOR (p[6], x[3], x[4], x[5]);
+  VECTOR (p[7], x[3], x[1], x[5]);
+
+  MID (p[0], p[6], q[0]);
+  SUB (q[0], p[0], q[1]);
+
+  if (count < PRIMITIVES_PER_OCTANT || q[1][0] <= cutoff) /* assumption of cubic octants */
+  {
+    struct cell *cell;
+    struct face *face;
+
+    ERRMEM (cell = calloc (1, sizeof (struct cell)));
+    cell->octree = octree;
+    cell->next = octree->cell;
+    octree->cell = cell;
+
+    for (i = 0, t = triang; i < count; i ++, t += 9)
+    {
+      ERRMEM (face = calloc (1, sizeof (struct face)));
+      ERRMEM (face->t = malloc (sizeof (REAL [3][3])));
+      face->leaf = (struct shape*) 1; /* mock pointer to pass test in render_domains */
+      face->next = cell->face;
+      cell->face = face;
+      face->n = 1;
+
+      COPY (t, face->t[0][0]);
+      COPY (t+3, face->t[0][1]);
+      COPY (t+6, face->t[0][2]);
+
+      NORMAL (t,t+3,t+6, face->normal);
+    }
+  }
+  else
+  {
+    if (!octree->down [0])
+    {
+      VECTOR (y, p[0][0], p[0][1], p[0][2]);
+      VECTOR (y+3, q[0][0], q[0][1], q[0][2]);
+      octree->down [0] = octree_create (y);
+      octree->down [0]->up = octree;
+
+      VECTOR (y, p[0][0], q[0][1], p[0][2]);
+      VECTOR (y+3, q[0][0], p[6][1], q[0][2]);
+      octree->down [1] = octree_create (y);
+      octree->down [1]->up = octree;
+
+      VECTOR (y, q[0][0], q[0][1], p[0][2]);
+      VECTOR (y+3, p[6][0], p[6][1], q[0][2]);
+      octree->down [2] = octree_create (y);
+      octree->down [2]->up = octree;
+
+      VECTOR (y, q[0][0], p[0][1], p[0][2]);
+      VECTOR (y+3, p[6][0], q[0][1], q[0][2]);
+      octree->down [3] = octree_create (y);
+      octree->down [3]->up = octree;
+
+      VECTOR (y, p[0][0], p[0][1], q[0][2]);
+      VECTOR (y+3, q[0][0], q[0][1], p[6][2]);
+      octree->down [4] = octree_create (y);
+      octree->down [4]->up = octree;
+
+      VECTOR (y, p[0][0], q[0][1], q[0][2]);
+      VECTOR (y+3, q[0][0], p[6][1], p[6][2]);
+      octree->down [5] = octree_create (y);
+      octree->down [5]->up = octree;
+
+      VECTOR (y, q[0][0], q[0][1], q[0][2]);
+      VECTOR (y+3, p[6][0], p[6][1], p[6][2]);
+      octree->down [6] = octree_create (y);
+      octree->down [6]->up = octree;
+
+      VECTOR (y, q[0][0], p[0][1], q[0][2]);
+      VECTOR (y+3, p[6][0], q[0][1], p[6][2]);
+      octree->down [7] = octree_create (y);
+      octree->down [7]->up = octree;
+    }
+
+    ERRMEM (copy = malloc (count * sizeof (REAL [9])));
+
+    for (i = 0; i < 8; i ++)
+    {
+      x = octree->down[i]->extents;
+
+      size = 0;
+      c = copy;
+
+      for (j = 0, t = triang; j < count; j ++, t += 9)
+      {
+	y [0] =  FLT_MAX;
+	y [1] =  FLT_MAX;
+	y [2] =  FLT_MAX;
+	y [3] = -FLT_MAX;
+	y [4] = -FLT_MAX;
+	y [5] = -FLT_MAX;
+
+	for (k = 0; k < 3; k ++)
+	{
+	  if (t[3*k+0] < y[0]) y[0] = t[3*k+0];
+	  if (t[3*k+1] < y[1]) y[1] = t[3*k+1];
+	  if (t[3*k+2] < y[2]) y[2] = t[3*k+2];
+	  if (t[3*k+0] > y[3]) y[3] = t[3*k+0];
+	  if (t[3*k+1] > y[4]) y[4] = t[3*k+1];
+	  if (t[3*k+2] > y[5]) y[5] = t[3*k+2];
+        }
+
+	if (y[0] > x[3] ||
+	    y[1] > x[4] ||
+	    y[2] > x[5] ||
+	    y[3] < x[0] ||
+	    y[4] < x[1] ||
+	    y[5] < x[2]) continue;
+	else
+	{
+          COPY9(t, c);
+	  size ++;
+	  c += 9; 
+	}
+      }
+
+      if (size) octree_insert_triangles (octree->down [i], copy, size, cutoff);
+    }
+
+    free (copy);
+  }
 }
 
 /* free octree memory */

@@ -142,6 +142,9 @@ struct octree* octree_create (REAL extents [6]);
 /* insert domain and refine octree down to a cutoff edge length */
 void octree_insert_domain (struct octree *octree, struct domain *domain, REAL cutoff);
 
+/* insert triangles into octree */
+void octree_insert_triangles (struct octree *octree, REAL *triang, int count, REAL cutoff);
+
 /* free octree memory */
 void octree_destroy (struct octree *octree);
 
@@ -166,5 +169,8 @@ struct simulation
 
 /* global simulations list */
 extern struct simulation *simulation;
+
+/* STL read */
+REAL* stlread (const char *path, int *count);
 
 #endif
