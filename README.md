@@ -1,4 +1,4 @@
-# Oaktree
+# oaktree
 Marching cubes based toy 3d modeller.
 
 An adaptive octree marching cubes approach is combined with constructive solid geometry based shape definition
