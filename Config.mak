@@ -33,8 +33,8 @@ LAPACK = -L/usr/lib -llapack
 # Python
 #
 
-PYTHON = -I/usr/include/python2.6
-PYTHONLIB = -L/usr/lib -lpython2.6
+PYTHON = -I/usr/include/python3.10
+PYTHONLIB = -L/usr/lib -lpython3.10
 
 #
 # OpenGL (yes/no)

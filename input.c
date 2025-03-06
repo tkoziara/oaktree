@@ -47,7 +47,7 @@ static int is_string (PyObject *obj, char *var)
 {
   if (obj)
   {
-    if (!PyString_Check (obj))
+    if (!PyUnicode_Check (obj))
     {
       char buf [BUFLEN];
       sprintf (buf, "'%s' must be a string", var);
@@ -163,8 +163,8 @@ static int is_list_of_tuples (PyObject *obj, char *var, int min_length, int tupl
 #define TYPETEST(test) if(!(test)) return NULL
 
 /* string argument if block comparison */
-#define IFIS(obj, val) if (strcmp (PyString_AsString (obj), val) == 0)
-#define ELIF(obj, val) else if (strcmp (PyString_AsString (obj), val) == 0)
+#define IFIS(obj, val) if (strcmp (PyUnicode_AsUTF8 (obj), val) == 0)
+#define ELIF(obj, val) else if (strcmp (PyUnicode_AsUTF8 (obj), val) == 0)
 #define ELSE else
 
 /*
@@ -214,8 +214,8 @@ static PyObject* SIMULATION_new (PyTypeObject *type, PyObject *args, PyObject *k
 	      is_positive (step, kwl[2]) && is_positive (cutoff, kwl[4]));
 
     ERRMEM (simu = calloc (1, sizeof (struct simulation)));
-    ERRMEM (simu->outpath = malloc (strlen (PyString_AsString (outpath)) + 1));
-    strcpy (simu->outpath, PyString_AsString (outpath));
+    ERRMEM (simu->outpath = malloc (strlen (PyUnicode_AsUTF8 (outpath)) + 1));
+    strcpy (simu->outpath, PyUnicode_AsUTF8 (outpath));
     simu->duration = duration;
     simu->step = step;
     simu->cutoff = cutoff;
@@ -233,7 +233,7 @@ static PyObject* SIMULATION_new (PyTypeObject *type, PyObject *args, PyObject *k
 /* destructor */
 static void SIMULATION_dealloc (SIMULATION *self)
 {
-  self->ob_type->tp_free ((PyObject*)self);
+  Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 /* SIMULATION methods */
@@ -288,7 +288,7 @@ static void SHAPE_dealloc (SHAPE *self)
 {
   shape_destroy (self->ptr);
 
-  self->ob_type->tp_free ((PyObject*)self);
+  Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 /* SHAPE methods */
@@ -370,8 +370,8 @@ static PyObject* DOMAIN_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
     domain->shape = shape_copy (shape->ptr);
     if (label)
     {
-      ERRMEM (domain->label = malloc (strlen (PyString_AsString (label)) + 1));
-      strcpy (domain->label, PyString_AsString (label));
+      ERRMEM (domain->label = malloc (strlen (PyUnicode_AsUTF8 (label)) + 1));
+      strcpy (domain->label, PyUnicode_AsUTF8 (label));
     }
     domain->grid = grid;
 
@@ -389,7 +389,7 @@ static PyObject* DOMAIN_new (PyTypeObject *type, PyObject *args, PyObject *kwds)
 /* destructor */
 static void DOMAIN_dealloc (DOMAIN *self)
 {
-  self->ob_type->tp_free ((PyObject*)self);
+  Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 /* DOMAIN methods */
@@ -470,7 +470,7 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
     a->p [1] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (base, 1));
     a->p [2] = (REAL) PyFloat_AsDouble (PyTuple_GetItem (base, 2));
     VECTOR (a->n, 0, 0, -1);
-    a->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
+    a->scolor = PyLong_AsLong(PyTuple_GetItem(scolor, 0));
     a->r = r;
     a->s = 1.0;
     sa->what = HSP;
@@ -481,7 +481,7 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
 
     VECTOR (b->p, a->p[0], a->p[1], a->p[2]+h);
     VECTOR (b->n, 0, 0, 1);
-    b->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
+    b->scolor = PyLong_AsLong(PyTuple_GetItem(scolor, 2));
     b->r = r;
     b->s = 1.0;
     sb->what = HSP;
@@ -494,7 +494,7 @@ static PyObject* CYLINDER (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (c->d, 0, 0, 1);
     c->r = r;
     c->s = 1.0;
-    c->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
+    c->scolor = PyLong_AsLong(PyTuple_GetItem(scolor, 1));
     MID (a->p, b->p, x);
     sc->what = CYL;
     sc->data = c;
@@ -537,7 +537,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->n, -1, 0, 0);
     h->r = ALG_SQR2 * MAX (v, w) / 2.;
     h->s = 1.0;
-    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
+    h->scolor = PyLong_AsLong (PyTuple_GetItem (scolor, 0));
     a->what = HSP;
     a->data = h;
 
@@ -548,7 +548,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->n, 0, -1, 0);
     h->r = ALG_SQR2 * MAX (u, w) / 2.;
     h->s = 1.0;
-    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 1));
+    h->scolor = PyLong_AsLong (PyTuple_GetItem (scolor, 1));
     b->what = HSP;
     b->data = h;
 
@@ -559,7 +559,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->n, 0, 0, -1);
     h->r = ALG_SQR2 * MAX (u, v) / 2.;
     h->s = 1.0;
-    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 2));
+    h->scolor = PyLong_AsLong (PyTuple_GetItem (scolor, 2));
     c->what = HSP;
     c->data = h;
 
@@ -570,7 +570,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->n, 1, 0, 0);
     h->r = ALG_SQR2 * MAX (v, w) / 2.;
     h->s = 1.0;
-    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 3));
+    h->scolor = PyLong_AsLong (PyTuple_GetItem (scolor, 3));
     d->what = HSP;
     d->data = h;
 
@@ -581,7 +581,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->n, 0, 1, 0);
     h->r = ALG_SQR2 * MAX (u, w) / 2.;
     h->s = 1.0;
-    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 4));
+    h->scolor = PyLong_AsLong (PyTuple_GetItem (scolor, 4));
     e->what = HSP;
     e->data = h;
 
@@ -593,7 +593,7 @@ static PyObject* CUBE (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (h->n, 0, 0, 1);
     h->r = ALG_SQR2 * MAX (u, v) / 2.;
     h->s = 1.0;
-    h->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 5));
+    h->scolor = PyLong_AsLong (PyTuple_GetItem (scolor, 5));
     f->what = HSP;
     f->data = h;
     
@@ -657,7 +657,7 @@ static PyObject* POLYGON (PyObject *self, PyObject *args, PyObject *kwds)
       SUB (a->p, p, v);
       a->r = LEN (v);
       a->s = 1.0;
-      a->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, i+1));
+      a->scolor = PyLong_AsLong (PyTuple_GetItem (scolor, i+1));
     }
 
     /* base */
@@ -671,7 +671,7 @@ static PyObject* POLYGON (PyObject *self, PyObject *args, PyObject *kwds)
     SUB (a->p, e, v);
     a->r = LEN (v);
     a->s = 1.0;
-    a->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, 0));
+    a->scolor = PyLong_AsLong (PyTuple_GetItem (scolor, 0));
 
     /* top */
     ERRMEM (s [n+1] = calloc (1, sizeof (struct shape)));
@@ -683,7 +683,7 @@ static PyObject* POLYGON (PyObject *self, PyObject *args, PyObject *kwds)
     VECTOR (a->n, 0, 0, 1);
     a->r = LEN (v);
     a->s = 1.0;
-    a->scolor = PyInt_AsLong (PyTuple_GetItem (scolor, n+1));
+    a->scolor = PyLong_AsLong (PyTuple_GetItem (scolor, n+1));
 
     /* combine */
     out->ptr = shape_combine (s[0], MUL, s[n+1]); /* base and top */
@@ -1042,32 +1042,73 @@ static PyMethodDef methods [] =
  * initialization
  */
 
-static void initinput (void)
-{
-  PyObject *m;
+static struct PyModuleDef inputmodule = {
+  PyModuleDef_HEAD_INIT,
+  "oaktree",
+  NULL,
+  -1,
+  methods
+};
 
-  if (!(m =  Py_InitModule3 ("oaktree", methods, "oaktree module"))) return;
+PyMODINIT_FUNC PyInit_input(void) {
+  PyObject* m;
 
-  TYPEINIT (SIMULATION_TYPE, SIMULATION, "solfec.SIMULATION",
-    Py_TPFLAGS_DEFAULT, SIMULATION_dealloc, SIMULATION_new,
-    SIMULATION_methods, SIMULATION_members, SIMULATION_getset);
-  if (PyType_Ready (&SIMULATION_TYPE) < 0) return;
-  Py_INCREF (&SIMULATION_TYPE);
-  PyModule_AddObject (m, "SIMULATION", (PyObject*)&SIMULATION_TYPE);
+  /* Initialize SIMULATION_TYPE */
+  TYPEINIT(SIMULATION_TYPE,
+           SIMULATION,
+           "oaktree.SIMULATION",
+           Py_TPFLAGS_DEFAULT,
+           (destructor)SIMULATION_dealloc,
+           (newfunc)SIMULATION_new,
+           SIMULATION_methods,
+           SIMULATION_members,
+           SIMULATION_getset);
 
-  TYPEINIT (SHAPE_TYPE, SHAPE, "solfec.SHAPE",
-    Py_TPFLAGS_DEFAULT, SHAPE_dealloc, SHAPE_new,
-    SHAPE_methods, SHAPE_members, SHAPE_getset);
-  if (PyType_Ready (&SHAPE_TYPE) < 0) return;
-  Py_INCREF (&SHAPE_TYPE);
-  PyModule_AddObject (m, "SHAPE", (PyObject*)&SHAPE_TYPE);
+  /* Initialize SHAPE_TYPE */
+  TYPEINIT(SHAPE_TYPE,
+           SHAPE,
+           "oaktree.SHAPE",
+           Py_TPFLAGS_DEFAULT,
+           (destructor)SHAPE_dealloc,
+           (newfunc)SHAPE_new,
+           SHAPE_methods,
+           SHAPE_members,
+           SHAPE_getset);
 
-  TYPEINIT (DOMAIN_TYPE, DOMAIN, "solfec.DOMAIN",
-    Py_TPFLAGS_DEFAULT, DOMAIN_dealloc, DOMAIN_new,
-    DOMAIN_methods, DOMAIN_members, DOMAIN_getset);
-  if (PyType_Ready (&DOMAIN_TYPE) < 0) return;
-  Py_INCREF (&DOMAIN_TYPE);
-  PyModule_AddObject (m, "DOMAIN", (PyObject*)&DOMAIN_TYPE);
+  /* Initialize DOMAIN_TYPE */
+  TYPEINIT(DOMAIN_TYPE,
+           DOMAIN,
+           "oaktree.DOMAIN",
+           Py_TPFLAGS_DEFAULT,
+           (destructor)DOMAIN_dealloc,
+           (newfunc)DOMAIN_new,
+           DOMAIN_methods,
+           DOMAIN_members,
+           DOMAIN_getset);
+
+  if (PyType_Ready(&SIMULATION_TYPE) < 0)
+    return NULL;
+
+  if (PyType_Ready(&SHAPE_TYPE) < 0)
+    return NULL;
+
+  if (PyType_Ready(&DOMAIN_TYPE) < 0)
+    return NULL;
+
+  m = PyModule_Create(&inputmodule);
+  if (m == NULL)
+    return NULL;
+
+  Py_INCREF(&SIMULATION_TYPE);
+  PyModule_AddObject(m, "SIMULATION", (PyObject*)&SIMULATION_TYPE);
+
+  Py_INCREF(&SHAPE_TYPE);
+  PyModule_AddObject(m, "SHAPE", (PyObject*)&SHAPE_TYPE);
+
+  Py_INCREF(&DOMAIN_TYPE);
+  PyModule_AddObject(m, "DOMAIN", (PyObject*)&DOMAIN_TYPE);
+
+  return m;
 }
 
 /* 
@@ -1085,29 +1126,35 @@ int input (const char *path)
 
   Py_Initialize();
 
-  initinput ();
+  PyObject *module = PyInit_input();
+  if (!module) return -1;
 
-  PyRun_SimpleString("from oaktree import SIMULATION\n"
-                     "from oaktree import SHAPE\n"
-                     "from oaktree import SPHERE\n"
-                     "from oaktree import CYLINDER\n"
-                     "from oaktree import CUBE\n"
-                     "from oaktree import POLYGON\n"
-                     "from oaktree import MLS\n"
-                     "from oaktree import COPY\n"
-                     "from oaktree import UNION\n"
-                     "from oaktree import INTERSECTION\n"
-                     "from oaktree import DIFFERENCE\n"
-                     "from oaktree import MOVE\n"
-                     "from oaktree import ROTATE\n"
-                     "from oaktree import FILLET\n"
-                     "from oaktree import DOMAIN\n");
+  /* Add the module to sys.modules */
+  PyObject *sys_modules = PyImport_GetModuleDict();
+  PyDict_SetItemString(sys_modules, "oaktree", module);
+
+  /* Now we can safely run the initialization code */
+  PyRun_SimpleString("import sys\n"
+                    "from oaktree import SIMULATION\n"
+                    "from oaktree import SHAPE\n"
+                    "from oaktree import SPHERE\n"
+                    "from oaktree import CYLINDER\n"
+                    "from oaktree import CUBE\n"
+                    "from oaktree import POLYGON\n"
+                    "from oaktree import MLS\n"
+                    "from oaktree import COPY\n"
+                    "from oaktree import UNION\n"
+                    "from oaktree import INTERSECTION\n"
+                    "from oaktree import DIFFERENCE\n"
+                    "from oaktree import MOVE\n"
+                    "from oaktree import ROTATE\n"
+                    "from oaktree import FILLET\n"
+                    "from oaktree import DOMAIN\n");
 
   ERRMEM (line = malloc (128 + strlen (path)));
-  sprintf (line, "execfile ('%s')", path);
+  sprintf (line, "exec(open('%s').read())", path);
 
-  error = PyRun_SimpleString (line); /* we do not run a file directly because FILE destriptors differe
-					between WIN32 and UNIX while Python is often provided in binary form */
+  error = PyRun_SimpleString (line);
   fclose (file);
   free (line);
 
